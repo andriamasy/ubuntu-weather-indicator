@@ -1,0 +1,25 @@
+export function readGSettings(settings) {
+    return {
+        cityName: settings.get_string('city-name'),
+        countryName: settings.get_string('country-name'),
+        adminName: settings.get_string('admin-name'),
+        latitude: settings.get_double('latitude'),
+        longitude: settings.get_double('longitude'),
+        timezone: settings.get_string('timezone'),
+        manualReady: settings.get_boolean('manual-ready'),
+        useAutoLocation: settings.get_boolean('use-auto-location'),
+        autoLatitude: settings.get_double('auto-latitude'),
+        autoLongitude: settings.get_double('auto-longitude'),
+        autoReady: settings.get_boolean('auto-ready'),
+        locationError: settings.get_string('location-error'),
+        temperatureUnit: settings.get_string('temperature-unit'),
+        windSpeedUnit: settings.get_string('wind-speed-unit'),
+        refreshMinutes: settings.get_int('refresh-minutes'),
+        showIcon: settings.get_boolean('show-icon'),
+        showTemperature: settings.get_boolean('show-temperature'),
+        barFormat: settings.get_string('bar-format'),
+        clockSide: settings.get_string('clock-side'),
+        autostart: settings.get_boolean('autostart'),
+        provider: settings.get_string('provider'),
+    };
+}

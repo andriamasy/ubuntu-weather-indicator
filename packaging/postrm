@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+UUID="ubuntu-weather-indicator@lunix"
+EXT="/usr/share/gnome-shell/extensions/${UUID}"
+
+case "${1:-}" in
+    remove|purge)
+        rm -f "${EXT}/schemas/gschemas.compiled"
+        rmdir "${EXT}/schemas" 2>/dev/null || true
+        rmdir "${EXT}" 2>/dev/null || true
+        if [ -d /usr/share/glib-2.0/schemas ]; then
+            glib-compile-schemas /usr/share/glib-2.0/schemas || true
+        fi
+        ;;
+esac
+
+# Les réglages dconf de l'utilisateur et ~/.cache/ubuntu-weather-indicator
+# ne sont pas supprimés, y compris lors d'une purge.
+exit 0

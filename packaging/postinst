@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+UUID="ubuntu-weather-indicator@lunix"
+EXT="/usr/share/gnome-shell/extensions/${UUID}"
+
+if [ "${1:-}" = "configure" ]; then
+    if ! ubuntu-weather-indicator check; then
+        echo "ubuntu-weather-indicator : installation annulée, environnement non pris en charge." >&2
+        exit 1
+    fi
+    glib-compile-schemas /usr/share/glib-2.0/schemas
+    glib-compile-schemas "${EXT}/schemas"
+fi
+
+exit 0

@@ -1,0 +1,330 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: ubuntu-weather-indicator 1.0.0\n"
+"Report-Msgid-Bugs-To: mathieu@localhost\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "A system dialog asks for permission. City-level coordinates are sent only to Open-Meteo."
+msgstr "A system dialog asks for permission. City-level coordinates are sent only to Open-Meteo."
+
+msgid "About"
+msgstr "About"
+
+msgid "After the clock"
+msgstr "After the clock"
+
+msgid "Appearance"
+msgstr "Appearance"
+
+msgid "Automatic location"
+msgstr "Automatic location"
+
+msgid "Automatic location is unavailable."
+msgstr "Automatic location is unavailable."
+
+msgid "Before the clock"
+msgstr "Before the clock"
+
+msgid "Behaviour"
+msgstr "Behaviour"
+
+msgid "Celsius"
+msgstr "Celsius"
+
+msgid "Choose a city. No weather is shown until a location is set."
+msgstr "Choose a city. No weather is shown until a location is set."
+
+msgid "City"
+msgstr "City"
+
+msgid "City name"
+msgstr "City name"
+
+msgid "Clear"
+msgstr "Clear"
+
+msgid "Cloudiness"
+msgstr "Cloudiness"
+
+msgid "Configure a city to see the weather."
+msgstr "Configure a city to see the weather."
+
+msgid "Current location"
+msgstr "Current location"
+
+msgid "Depositing rime fog"
+msgstr "Depositing rime fog"
+
+msgid "Drizzle"
+msgstr "Drizzle"
+
+msgid "Fahrenheit"
+msgstr "Fahrenheit"
+
+msgid "Feels like %s"
+msgstr "Feels like %s"
+
+msgid "Fog"
+msgstr "Fog"
+
+msgid "Free non-commercial Open-Meteo API. Personal use, fewer than 10 000 requests per day."
+msgstr "Free non-commercial Open-Meteo API. Personal use, fewer than 10 000 requests per day."
+
+msgid "Freezing drizzle"
+msgstr "Freezing drizzle"
+
+msgid "Freezing rain"
+msgstr "Freezing rain"
+
+msgid "Heavy drizzle"
+msgstr "Heavy drizzle"
+
+msgid "Heavy freezing drizzle"
+msgstr "Heavy freezing drizzle"
+
+msgid "Heavy freezing rain"
+msgstr "Heavy freezing rain"
+
+msgid "Heavy rain"
+msgstr "Heavy rain"
+
+msgid "Heavy showers"
+msgstr "Heavy showers"
+
+msgid "Heavy snow"
+msgstr "Heavy snow"
+
+msgid "Humidity"
+msgstr "Humidity"
+
+msgid "Icon and temperature"
+msgstr "Icon and temperature"
+
+msgid "Icon only"
+msgstr "Icon only"
+
+msgid "Icon, temperature and city"
+msgstr "Icon, temperature and city"
+
+msgid "Kilometres per hour"
+msgstr "Kilometres per hour"
+
+msgid "Knots"
+msgstr "Knots"
+
+msgid "Light drizzle"
+msgstr "Light drizzle"
+
+msgid "Light rain"
+msgstr "Light rain"
+
+msgid "Light showers"
+msgstr "Light showers"
+
+msgid "Light snow"
+msgstr "Light snow"
+
+msgid "Light snow showers"
+msgstr "Light snow showers"
+
+msgid "Loading weather…"
+msgstr "Loading weather…"
+
+msgid "Location"
+msgstr "Location"
+
+msgid "Mainly clear"
+msgstr "Mainly clear"
+
+msgid "Manual city"
+msgstr "Manual city"
+
+msgid "Metres per second"
+msgstr "Metres per second"
+
+msgid "Miles per hour"
+msgstr "Miles per hour"
+
+msgid "Minutes between updates. Minimum 10."
+msgstr "Minutes between updates. Minimum 10."
+
+msgid "Next days"
+msgstr "Next days"
+
+msgid "Next hours"
+msgstr "Next hours"
+
+msgid "No city selected"
+msgstr "No city selected"
+
+msgid "No matching city."
+msgstr "No matching city."
+
+msgid "Open preferences"
+msgstr "Open preferences"
+
+msgid "Overcast"
+msgstr "Overcast"
+
+msgid "Partly cloudy"
+msgstr "Partly cloudy"
+
+msgid "Position beside the clock"
+msgstr "Position beside the clock"
+
+msgid "Precipitation"
+msgstr "Precipitation"
+
+msgid "Pressure"
+msgstr "Pressure"
+
+msgid "Precipitation probability"
+msgstr "Precipitation probability"
+
+msgid "Rain"
+msgstr "Rain"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Refresh interval"
+msgstr "Refresh interval"
+
+msgid "Results"
+msgstr "Results"
+
+msgid "Saved city"
+msgstr "Saved city"
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Search failed."
+msgstr "Search failed."
+
+msgid "Search uses the Open-Meteo geocoding service."
+msgstr "Search uses the Open-Meteo geocoding service."
+
+msgid "Searching…"
+msgstr "Searching…"
+
+msgid "Session"
+msgstr "Session"
+
+msgid "Show the icon"
+msgstr "Show the icon"
+
+msgid "Show the temperature"
+msgstr "Show the temperature"
+
+msgid "Showers"
+msgstr "Showers"
+
+msgid "Showing the last saved update."
+msgstr "Showing the last saved update."
+
+msgid "Snow"
+msgstr "Snow"
+
+msgid "Snow grains"
+msgstr "Snow grains"
+
+msgid "Snow showers"
+msgstr "Snow showers"
+
+msgid "Start with the session"
+msgstr "Start with the session"
+
+msgid "Temperature only"
+msgstr "Temperature only"
+
+msgid "Temperature unit"
+msgstr "Temperature unit"
+
+msgid "The extension starts with the session while it is enabled. Turning this off disables it."
+msgstr "The extension starts with the session while it is enabled. Turning this off disables it."
+
+msgid "The weather service asked to slow down."
+msgstr "The weather service asked to slow down."
+
+msgid "The weather service asked to slow down. Showing the last saved update."
+msgstr "The weather service asked to slow down. Showing the last saved update."
+
+msgid "The weather service returned data that could not be read."
+msgstr "The weather service returned data that could not be read."
+
+msgid "The weather service returned data that could not be read. Showing the last saved update."
+msgstr "The weather service returned data that could not be read. Showing the last saved update."
+
+msgid "Thunderstorm"
+msgstr "Thunderstorm"
+
+msgid "Thunderstorm with hail"
+msgstr "Thunderstorm with hail"
+
+msgid "Thunderstorm with heavy hail"
+msgstr "Thunderstorm with heavy hail"
+
+msgid "Today"
+msgstr "Today"
+
+msgid "Tomorrow"
+msgstr "Tomorrow"
+
+msgid "Top bar"
+msgstr "Top bar"
+
+msgid "Top bar format"
+msgstr "Top bar format"
+
+msgid "Type at least 2 characters."
+msgstr "Type at least 2 characters."
+
+msgid "Units"
+msgstr "Units"
+
+msgid "Unknown conditions"
+msgstr "Unknown conditions"
+
+msgid "Updated at %s"
+msgstr "Updated at %s"
+
+msgid "Updates"
+msgstr "Updates"
+
+msgid "Weather"
+msgstr "Weather"
+
+msgid "Weather data by Open-Meteo.com (CC BY 4.0)"
+msgstr "Weather data by Open-Meteo.com (CC BY 4.0)"
+
+msgid "Weather data provided by: Open-Meteo"
+msgstr "Weather data provided by: Open-Meteo"
+
+msgid "Weather unavailable"
+msgstr "Weather unavailable"
+
+msgid "Weather, %s"
+msgstr "Weather, %s"
+
+msgid "Weather, %s, saved data"
+msgstr "Weather, %s, saved data"
+
+msgid "Weather, loading"
+msgstr "Weather, loading"
+
+msgid "Weather, location not set"
+msgstr "Weather, location not set"
+
+msgid "Weather, unavailable"
+msgstr "Weather, unavailable"
+
+msgid "Wind"
+msgstr "Wind"
+
+msgid "Wind speed"
+msgstr "Wind speed"

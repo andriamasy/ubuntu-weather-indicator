@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ubuntu-weather-indicator"
+          path="/org/gnome/shell/extensions/ubuntu-weather-indicator/">
+    <key name="city-name" type="s">
+      <default>''</default>
+      <summary>City name</summary>
+    </key>
+    <key name="country-name" type="s">
+      <default>''</default>
+      <summary>Country name</summary>
+    </key>
+    <key name="admin-name" type="s">
+      <default>''</default>
+      <summary>Region name</summary>
+    </key>
+    <key name="latitude" type="d">
+      <default>0</default>
+      <summary>Manual latitude</summary>
+    </key>
+    <key name="longitude" type="d">
+      <default>0</default>
+      <summary>Manual longitude</summary>
+    </key>
+    <key name="timezone" type="s">
+      <default>''</default>
+      <summary>Timezone reported for the manual city</summary>
+    </key>
+    <key name="manual-ready" type="b">
+      <default>false</default>
+      <summary>A manual city has been chosen</summary>
+    </key>
+    <key name="use-auto-location" type="b">
+      <default>false</default>
+      <summary>Use automatic location after explicit consent</summary>
+    </key>
+    <key name="auto-latitude" type="d">
+      <default>0</default>
+      <summary>Automatic latitude rounded to city precision</summary>
+    </key>
+    <key name="auto-longitude" type="d">
+      <default>0</default>
+      <summary>Automatic longitude rounded to city precision</summary>
+    </key>
+    <key name="auto-ready" type="b">
+      <default>false</default>
+      <summary>An automatic fix has been received</summary>
+    </key>
+    <key name="location-error" type="s">
+      <default>''</default>
+      <summary>Last automatic location error code</summary>
+    </key>
+    <key name="temperature-unit" type="s">
+      <default>'celsius'</default>
+      <choices>
+        <choice value="celsius"/>
+        <choice value="fahrenheit"/>
+      </choices>
+    </key>
+    <key name="wind-speed-unit" type="s">
+      <default>'kmh'</default>
+      <choices>
+        <choice value="kmh"/>
+        <choice value="ms"/>
+        <choice value="mph"/>
+        <choice value="kn"/>
+      </choices>
+    </key>
+    <key name="refresh-minutes" type="i">
+      <default>30</default>
+      <range min="10" max="180"/>
+      <summary>Refresh interval in minutes</summary>
+    </key>
+    <key name="show-icon" type="b">
+      <default>true</default>
+    </key>
+    <key name="show-temperature" type="b">
+      <default>true</default>
+    </key>
+    <key name="bar-format" type="s">
+      <default>'icon-temp'</default>
+      <choices>
+        <choice value="icon-temp"/>
+        <choice value="temp"/>
+        <choice value="icon"/>
+        <choice value="icon-temp-city"/>
+      </choices>
+    </key>
+    <key name="clock-side" type="s">
+      <default>'after'</default>
+      <choices>
+        <choice value="before"/>
+        <choice value="after"/>
+      </choices>
+      <summary>Place the indicator before or after the clock</summary>
+    </key>
+    <key name="autostart" type="b">
+      <default>true</default>
+      <summary>Start with the GNOME session while the extension is enabled</summary>
+    </key>
+    <key name="provider" type="s">
+      <default>'open-meteo'</default>
+      <summary>Weather provider id</summary>
+    </key>
+  </schema>
+</schemalist>

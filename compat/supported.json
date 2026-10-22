@@ -1,0 +1,19 @@
+{
+  "tested": [
+    {
+      "distribution": "Ubuntu",
+      "version": "26.04.1",
+      "codename": "resolute",
+      "gnomeShell": "50.1",
+      "session": "wayland",
+      "notes": "Session réelle sur cette machine : indicateur placé à côté de l’horloge du panneau GNOME."
+    }
+  ],
+  "supported": {
+    "distributions": ["ubuntu"],
+    "ubuntuVersions": ["26.04"],
+    "gnomeShellMajor": [50]
+  },
+  "assumedCompatible": [],
+  "refused": "Toute autre version majeure de GNOME Shell, et toute distribution non testée, est refusée par le script de détection et par postinst."
+}

@@ -1,0 +1,12 @@
+{
+  "uuid": "ubuntu-weather-indicator@lunix",
+  "name": "Ubuntu Weather Indicator",
+  "description": "Temperature and forecast beside the GNOME clock, using the free Open-Meteo API.",
+  "shell-version": ["50"],
+  "gettext-domain": "ubuntu-weather-indicator",
+  "settings-schema": "org.gnome.shell.extensions.ubuntu-weather-indicator",
+  "version": 1,
+  "version-name": "1.0.0",
+  "session-modes": ["user"],
+  "url": "https://github.com/andriamasy/ubuntu-weather-indicator"
+}

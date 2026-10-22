@@ -1,0 +1,189 @@
+#!/bin/bash
+# Environment check and user-session helper for Ubuntu Weather Indicator.
+set -euo pipefail
+
+UUID="ubuntu-weather-indicator@lunix"
+SCHEMA="org.gnome.shell.extensions.ubuntu-weather-indicator"
+
+os_id() {
+    if [[ -n "${UWI_OS_ID:-}" ]]; then
+        printf '%s\n' "$UWI_OS_ID"
+        return
+    fi
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    printf '%s\n' "${ID}"
+}
+
+os_version() {
+    if [[ -n "${UWI_OS_VERSION:-}" ]]; then
+        printf '%s\n' "$UWI_OS_VERSION"
+        return
+    fi
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    printf '%s\n' "${VERSION_ID}"
+}
+
+gnome_version() {
+    if [[ -n "${UWI_GNOME_SHELL_VERSION:-}" ]]; then
+        printf '%s\n' "$UWI_GNOME_SHELL_VERSION"
+        return
+    fi
+    if ! command -v gnome-shell >/dev/null 2>&1; then
+        return 2
+    fi
+    gnome-shell --version | awk '{print $NF}'
+}
+
+refuse_root() {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        echo "Lancez ubuntu-weather-indicator depuis votre session, pas avec les privilèges root." >&2
+        exit 1
+    fi
+}
+
+cmd_check() {
+    local id version gnome major
+    id="$(os_id)"
+    version="$(os_version)"
+    if ! gnome="$(gnome_version)"; then
+        echo "GNOME Shell est introuvable. L'extension ne peut pas fonctionner." >&2
+        return 2
+    fi
+    major="${gnome%%.*}"
+    if [[ "$major" != "50" ]]; then
+        cat >&2 <<EOF
+GNOME Shell ${gnome} n'est pas pris en charge.
+Version testée : Ubuntu 26.04.1, GNOME Shell 50.1, session Wayland.
+Seule la version majeure 50 est acceptée.
+Installation interrompue pour ne pas modifier un environnement incompatible.
+EOF
+        return 3
+    fi
+    if [[ "$id" != "ubuntu" || "$version" != 26.04* ]]; then
+        cat >&2 <<EOF
+Distribution non testée : ${id} ${version}.
+Seule Ubuntu 26.04 avec GNOME Shell 50 a été vérifiée.
+Aucune compatibilité n'est supposée en dehors de ce couple.
+Pour forcer quand même : UWI_ALLOW_UNTESTED=1
+EOF
+        if [[ "${UWI_ALLOW_UNTESTED:-0}" != "1" ]]; then
+            return 4
+        fi
+    fi
+    echo "Environnement accepté : ${id} ${version}, GNOME Shell ${gnome}."
+    if [[ -n "${XDG_SESSION_TYPE:-}" && "${XDG_SESSION_TYPE}" != "wayland" && -z "${UWI_GNOME_SHELL_VERSION:-}" ]]; then
+        echo "Avertissement : la session n'est pas Wayland (${XDG_SESSION_TYPE}). GNOME Shell 50 ne prend plus X11 en charge." >&2
+    fi
+}
+
+schema_dir() {
+    local system="/usr/share/gnome-shell/extensions/${UUID}/schemas"
+    local user="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/${UUID}/schemas"
+    if [[ -f "${system}/gschemas.compiled" || -f "${system}/org.gnome.shell.extensions.ubuntu-weather-indicator.gschema.xml" ]]; then
+        printf '%s\n' "$system"
+    elif [[ -d "$user" ]]; then
+        printf '%s\n' "$user"
+    else
+        printf '%s\n' ""
+    fi
+}
+
+cmd_diagnose() {
+    echo "=== Système ==="
+    . /etc/os-release
+    echo "Distribution : ${PRETTY_NAME:-inconnue}"
+    echo "Session : ${XDG_SESSION_TYPE:-inconnue} ${XDG_CURRENT_DESKTOP:-}"
+    echo "=== GNOME Shell ==="
+    if command -v gnome-shell >/dev/null 2>&1; then
+        gnome-shell --version
+    else
+        echo "gnome-shell est absent"
+    fi
+    echo "=== Détection ==="
+    if cmd_check; then
+        echo "Détection : OK"
+    else
+        echo "Détection : échec (code $?)"
+    fi
+    echo "=== Extension ==="
+    local path=""
+    if command -v gnome-extensions >/dev/null 2>&1; then
+        gnome-extensions info "$UUID" || true
+    else
+        echo "gnome-extensions est absent"
+    fi
+    local dir
+    dir="$(schema_dir)"
+    if [[ -n "$dir" ]]; then
+        echo "Schéma : ${dir}"
+        if command -v gsettings >/dev/null 2>&1; then
+            echo -n "Ville : "
+            gsettings --schemadir "$dir" get "$SCHEMA" city-name || true
+            echo -n "Ville configurée : "
+            gsettings --schemadir "$dir" get "$SCHEMA" manual-ready || true
+            echo -n "Localisation automatique : "
+            gsettings --schemadir "$dir" get "$SCHEMA" use-auto-location || true
+        fi
+    else
+        echo "Schéma : non installé"
+    fi
+    local cache="${XDG_CACHE_HOME:-$HOME/.cache}/ubuntu-weather-indicator/last.json"
+    if [[ -f "$cache" ]]; then
+        echo "Cache : présent ($(stat -c '%y' "$cache"))"
+    else
+        echo "Cache : absent"
+    fi
+    echo "Les coordonnées et le contenu du cache ne sont pas affichés."
+    echo "=== Journal récent ==="
+    if command -v journalctl >/dev/null 2>&1; then
+        journalctl --user -b -n 80 --no-pager -t gnome-shell 2>/dev/null | grep -i -E 'ubuntu-weather|ubuntu_weather|Weather status|Indicator placed' || echo "Aucune ligne récente de l'indicateur."
+    fi
+}
+
+cmd_enable() {
+    refuse_root
+    cmd_check
+    gnome-extensions enable "$UUID"
+    exec gnome-extensions prefs "$UUID"
+}
+
+cmd_prefs() {
+    refuse_root
+    exec gnome-extensions prefs "$UUID"
+}
+
+cmd_status() {
+    exec gnome-extensions info "$UUID"
+}
+
+usage() {
+    cat <<EOF
+Usage : ubuntu-weather-indicator [check|enable|prefs|status|diagnose]
+
+  check      Vérifie Ubuntu 26.04 et GNOME Shell 50. Refuse le reste.
+  enable     Active l'extension dans la session, puis ouvre les préférences.
+  prefs      Ouvre les préférences.
+  status     Affiche l'état de l'extension.
+  diagnose   Rassemble un diagnostic sans coordonnées.
+EOF
+}
+
+main() {
+    local command="${1:-enable}"
+    case "$command" in
+        check) cmd_check ;;
+        enable) cmd_enable ;;
+        prefs) cmd_prefs ;;
+        status) cmd_status ;;
+        diagnose) cmd_diagnose ;;
+        -h|--help|help) usage ;;
+        *)
+            usage >&2
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

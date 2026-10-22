@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ubuntu Weather Indicator
+Name[fr]=Indicateur météo Ubuntu
+Comment=Show the weather beside the GNOME clock
+Comment[fr]=Affiche la météo à côté de l'horloge GNOME
+Exec=ubuntu-weather-indicator enable
+Icon=ubuntu-weather-indicator
+Terminal=false
+Categories=Utility;
+StartupNotify=true

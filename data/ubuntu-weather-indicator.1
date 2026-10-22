@@ -1,0 +1,30 @@
+.TH UBUNTU-WEATHER-INDICATOR 1 "octobre 2026" "1.0.0" "Manuel utilisateur"
+.SH NOM
+ubuntu-weather-indicator \- indicateur météo GNOME Shell pour Ubuntu
+.SH SYNOPSIS
+.B ubuntu-weather-indicator
+[\fIcheck\fR|\fIenable\fR|\fIprefs\fR|\fIstatus\fR|\fIdiagnose\fR]
+.SH DESCRIPTION
+Active et configure l'extension GNOME Shell qui affiche la température à côté de l'horloge.
+La commande ne doit pas être lancée avec les privilèges root, sauf
+.B check
+qui est aussi appelée par le script de configuration du paquet.
+.SH COMMANDES
+.TP
+.B check
+Vérifie qu'Ubuntu 26.04 et GNOME Shell 50 sont présents. Les autres versions sont refusées.
+.TP
+.B enable
+Active l'extension dans la session courante et ouvre les préférences.
+.TP
+.B diagnose
+Affiche un diagnostic. Les coordonnées ne sont pas imprimées.
+.SH FICHIERS
+.TP
+.I ~/.cache/ubuntu-weather-indicator/last.json
+Dernière réponse météo validée. Conservée lors de la désinstallation du paquet.
+.TP
+.I dconf:/org/gnome/shell/extensions/ubuntu-weather-indicator/
+Réglages de l'utilisateur. Conservés lors de la mise à jour et de la désinstallation.
+.SH "VOIR AUSSI"
+.BR gnome-extensions (1)

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.lunix.ubuntu-weather-indicator</id>
+  <developer id="dev.lunix">
+    <name>mathieu</name>
+  </developer>
+  <name>Ubuntu Weather Indicator</name>
+  <name xml:lang="fr">Indicateur météo Ubuntu</name>
+  <summary>Weather beside the GNOME clock</summary>
+  <summary xml:lang="fr">Météo à côté de l'horloge GNOME</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>Native GNOME Shell indicator for Ubuntu 26.04. It shows the temperature beside the clock and a forecast from Open-Meteo.</p>
+    <p xml:lang="fr">Indicateur natif GNOME Shell pour Ubuntu 26.04. Il affiche la température à côté de l'horloge et des prévisions Open-Meteo.</p>
+  </description>
+  <launchable type="desktop-id">ubuntu-weather-indicator.desktop</launchable>
+  <url type="homepage">https://open-meteo.com/</url>
+  <content_rating type="oars-1.1"/>
+</component>

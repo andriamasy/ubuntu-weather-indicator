@@ -1,0 +1,13 @@
+export const APP_VERSION = '1.0.0';
+export const EXTENSION_UUID = 'ubuntu-weather-indicator@lunix';
+export const SCHEMA_ID = 'org.gnome.shell.extensions.ubuntu-weather-indicator';
+export const GETTEXT_DOMAIN = 'ubuntu-weather-indicator';
+export const INDICATOR_ROLE = 'ubuntu-weather-indicator';
+export const USER_AGENT = `ubuntu-weather-indicator/${APP_VERSION} (personal; non-commercial)`;
+export const FORECAST_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
+export const GEOCODING_ENDPOINT = 'https://geocoding-api.open-meteo.com/v1/search';
+export const PROVIDER_ID = 'open-meteo';
+export const REQUEST_TIMEOUT_SECONDS = 10;
+export const DEFAULT_REFRESH_MINUTES = 30;
+export const MIN_REFRESH_MINUTES = 10;
+export const MAX_REFRESH_MINUTES = 180;

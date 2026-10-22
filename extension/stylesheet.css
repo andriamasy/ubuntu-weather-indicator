@@ -1,0 +1,106 @@
+.weather-indicator-box {
+    spacing: 4px;
+}
+
+.weather-indicator-temp {
+    font-weight: bold;
+}
+
+.weather-indicator-city {
+    margin-left: 2px;
+}
+
+.weather-indicator-stale {
+    font-style: italic;
+}
+
+.weather-popup {
+    min-width: 560px;
+}
+
+.weather-menu-item {
+    padding: 0;
+}
+
+.weather-menu-item:hover,
+.weather-menu-item:active {
+    background-color: transparent;
+}
+
+.weather-menu-root {
+    padding: 14px 18px 12px;
+    spacing: 12px;
+}
+
+.weather-top {
+    spacing: 16px;
+}
+
+.weather-summary {
+    spacing: 4px;
+}
+
+.weather-place {
+    font-size: 0.95em;
+}
+
+.weather-headline {
+    font-size: 1.55em;
+    font-weight: bold;
+}
+
+.weather-sun,
+.weather-clock,
+.weather-day-temps,
+.weather-day-body,
+.weather-footer {
+    spacing: 8px;
+}
+
+.weather-clock-label,
+.weather-day-date,
+.weather-stat {
+    font-size: 0.95em;
+}
+
+.weather-stats {
+    spacing: 2px;
+}
+
+.weather-separator {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.weather-forecast {
+    spacing: 28px;
+}
+
+.weather-day {
+    spacing: 2px;
+}
+
+.weather-day-title {
+    font-weight: bold;
+}
+
+.weather-footer {
+    margin-top: 4px;
+}
+
+.weather-attribution {
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.weather-tool {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    padding: 6px;
+}
+
+.weather-tool:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}

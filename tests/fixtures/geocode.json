@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "name": "Lyon",
+      "latitude": 45.74906,
+      "longitude": 4.84789,
+      "country": "France",
+      "admin1": "Auvergne-Rhône-Alpes",
+      "timezone": "Europe/Paris",
+      "country_code": "FR"
+    },
+    {
+      "name": "Lyon",
+      "latitude": 34.21789,
+      "longitude": -90.54204,
+      "country": "États-Unis",
+      "admin1": "Mississippi",
+      "timezone": "America/Chicago",
+      "country_code": "US"
+    }
+  ]
+}
