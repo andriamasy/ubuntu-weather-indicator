@@ -33,7 +33,7 @@ function clockAnchor() {
 }
 
 export class Indicator {
-    constructor({translate, onRefresh, onPreferences, onSelectCity, logger}) {
+    constructor({translate, onRefresh, onPreferences, onSelectCity, onSearchCities, logger}) {
         this._translate = translate;
         this._logger = logger;
         this._button = null;
@@ -41,6 +41,7 @@ export class Indicator {
         this._onRefresh = onRefresh;
         this._onPreferences = onPreferences;
         this._onSelectCity = onSelectCity;
+        this._onSearchCities = onSearchCities;
         this._presentation = null;
     }
 
@@ -80,6 +81,7 @@ export class Indicator {
             onRefresh: () => this._onRefresh(),
             onPreferences: () => this._onPreferences(),
             onSelectCity: city => this._onSelectCity?.(city),
+            onSearchCities: query => this._onSearchCities?.(query),
         });
 
         const existing = Main.panel.statusArea[INDICATOR_ROLE];
@@ -154,6 +156,7 @@ export class Indicator {
         this._onRefresh = null;
         this._onPreferences = null;
         this._onSelectCity = null;
+        this._onSearchCities = null;
         this._logger = null;
     }
 }

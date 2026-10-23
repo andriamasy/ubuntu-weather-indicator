@@ -121,6 +121,15 @@ export function rememberCity(list, city) {
     return [record, ...rest].slice(0, MAX_SAVED_CITIES);
 }
 
+export function forgetCity(list, city) {
+    const record = cityRecord(city);
+    const current = Array.isArray(list) ? list.slice(0, MAX_SAVED_CITIES) : [];
+    if (!record)
+        return current;
+    const key = placeKey({...record, source: 'manual'});
+    return current.filter(item => placeKey({...item, source: 'manual'}) !== key);
+}
+
 export function savedCitiesFromState(state) {
     const stored = parseSavedCities(state?.savedCities);
     const manual = manualLocation(state);

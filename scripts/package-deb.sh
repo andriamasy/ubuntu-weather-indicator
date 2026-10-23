@@ -53,9 +53,9 @@ gzip -9 -n -c "$ROOT/CHANGELOG.md" > "$DOC/changelog.gz"
 cat > "$DOC/changelog.Debian" <<EOF
 ${NAME} (${VERSION}) resolute; urgency=medium
 
-  * Villes enregistrées, pression en hPa, pluie probable et secours MET Norway.
+  * Menu en carte : lieu, mesures, heures du jour et semaine sur demande.
 
- -- mathieu <mathieu@localhost>  Fri, 23 Oct 2026 08:10:00 +0300
+ -- mathieu <mathieu@localhost>  Fri, 23 Oct 2026 10:15:00 +0300
 EOF
 gzip -9 -n -f "$DOC/changelog.Debian"
 

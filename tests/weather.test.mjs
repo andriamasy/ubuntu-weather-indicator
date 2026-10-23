@@ -15,6 +15,7 @@ import {
     clampRefreshMinutes,
     displayOptions,
     locationFromState,
+    forgetCity,
     placeKey,
     rememberCity,
     roundCoordinate,
@@ -411,6 +412,10 @@ test('saved cities keep the newest choice and ignore duplicates', () => {
     }));
     assert.equal(rememberCity([], null).length, 0);
     assert.equal(padded.reduce((list, city) => rememberCity(list, city), []).length, 6);
+    const kept = forgetCity(cities, parisCity);
+    assert.equal(kept.length, 1);
+    assert.equal(kept[0].name, 'Lyon');
+    assert.equal(forgetCity(cities, null).length, 2);
 });
 
 test('the first likely rain hour is reported and dry hours are skipped', () => {

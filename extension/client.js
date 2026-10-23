@@ -150,6 +150,14 @@ export class WeatherService {
         };
     }
 
+    async searchCities(query, locale) {
+        const provider = getProvider('open-meteo');
+        if (!provider)
+            return [];
+        const payload = await this._client.getJson(provider.geocodingUrl(query, locale));
+        return provider.parseGeocoding(payload);
+    }
+
     async lookupPlace(latitude, longitude, locale) {
         const payload = await this._client.getJson(reverseGeocodeUrl(latitude, longitude, locale));
         return parseReverseGeocode(payload);

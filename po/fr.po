@@ -352,3 +352,27 @@ msgstr "Nom du lieu : OpenStreetMap"
 
 msgid "Fallback forecast, no API key"
 msgstr "Prévision de secours, sans clé API"
+
+msgid "Add a city"
+msgstr "Ajouter une ville"
+
+msgid "Automatic location replaces the checked city."
+msgstr "La localisation automatique remplace la ville cochée."
+
+msgid "Choose"
+msgstr "Choisir"
+
+msgid "Remove"
+msgstr "Retirer"
+
+msgid "The checked city is shown beside the clock."
+msgstr "La ville cochée est affichée à côté de l’horloge."
+
+msgid "Use automatic location"
+msgstr "Utiliser la localisation automatique"
+
+msgid "Local weather"
+msgstr "Météo locale"
+
+msgid "Weather data provided by:"
+msgstr "Données météo fournies par :"

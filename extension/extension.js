@@ -56,6 +56,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
                 },
                 onPreferences: () => this.openPreferences(),
                 onSelectCity: city => this._selectSavedCity(city),
+                onSearchCities: query => this._searchCities(query),
                 logger: this._logger,
             });
             this._place();
@@ -134,6 +135,13 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
             settings: displayOptions(state),
             savedCities: savedCitiesFromState(state),
         });
+    }
+
+    _searchCities(query) {
+        if (!this._service)
+            return [];
+        const locale = GLib.get_language_names()?.[0] || 'en';
+        return this._service.searchCities(query, locale);
     }
 
     _selectSavedCity(city) {
