@@ -7,7 +7,7 @@ import {
     formatWind,
     windArrow,
 } from './units.js';
-import {hourLabel, weekdayIndex} from './time.js';
+import {forecastHourKey, hourKey, hourLabel, weekdayIndex} from './time.js';
 
 const RAIN_LIKELY_PERCENT = 40;
 
@@ -20,12 +20,40 @@ export function likelyRain(hourly) {
     }) || null;
 }
 
-function details(report, settings) {
+function hourZone(report) {
+    if (typeof report.timezone === 'string' && report.timezone.trim())
+        return report.timezone.trim();
+    const sample = report.observedAt || report.hourly?.[0]?.time || '';
+    if (typeof sample === 'string' && (sample.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(sample)))
+        return 'UTC';
+    return undefined;
+}
+
+function hoursFromNow(report, now) {
+    const hourly = Array.isArray(report.hourly) ? report.hourly : [];
+    const key = forecastHourKey(now, hourZone(report));
+    if (!key)
+        return {hourly, slot: null};
+    const start = hourly.findIndex(item => {
+        const itemKey = hourKey(item.time);
+        return itemKey && itemKey >= key;
+    });
+    if (start < 0)
+        return {hourly, slot: null};
+    const upcoming = hourly.slice(start);
+    const slot = hourKey(upcoming[0]?.time) === key ? upcoming[0] : null;
+    return {hourly: upcoming, slot};
+}
+
+function details(report, settings, now) {
     const unit = settings.temperatureUnit;
     const windUnit = settings.windSpeedUnit;
-    const sky = condition(report.weatherCode, report.isDay);
+    const aligned = now ? hoursFromNow(report, now) : {hourly: report.hourly, slot: null};
+    const slot = aligned.slot;
+    const sky = condition(slot?.weatherCode ?? report.weatherCode, slot?.isDay ?? report.isDay);
+    const hourly = aligned.hourly;
     return {
-        temperature: formatTemperature(report.temperatureC, unit),
+        temperature: formatTemperature(slot?.temperatureC ?? report.temperatureC, unit),
         apparent: formatTemperature(report.apparentC, unit),
         humidity: formatPercent(report.humidity),
         cloudCover: formatPercent(report.cloudCover),
@@ -36,10 +64,11 @@ function details(report, settings) {
         precipitationProbability: formatPercent(report.precipitationProbability),
         conditionName: sky.name,
         iconName: sky.iconName,
-        observedAt: report.observedAt,
-        hourly: report.hourly.map(item => {
+        observedAt: slot?.time || report.observedAt,
+        hourly: hourly.map(item => {
             const itemSky = condition(item.weatherCode, item.isDay ?? report.isDay);
             return {
+                time: item.time,
                 label: hourLabel(item.time),
                 temperature: formatTemperature(item.temperatureC, unit),
                 iconName: itemSky.iconName,
@@ -62,7 +91,7 @@ function details(report, settings) {
             };
         }),
         upcomingRain: (() => {
-            const rain = likelyRain(report.hourly);
+            const rain = likelyRain(hourly);
             if (!rain)
                 return null;
             return {
@@ -117,9 +146,10 @@ export function present({
     settings,
     savedCities = [],
     providerId = 'open-meteo',
+    now = null,
 }) {
     const hasReport = (status === 'live' || status === 'stale') && report;
-    const model = hasReport ? details(report, settings) : null;
+    const model = hasReport ? details(report, settings, now) : null;
     const showIcon = Boolean(settings.showIcon) && settings.barFormat !== 'temp';
     const showTemperature = Boolean(settings.showTemperature) && settings.barFormat !== 'icon';
     const showCity = settings.barFormat === 'icon-temp-city' && hasReport && Boolean(location?.name);
@@ -153,5 +183,6 @@ export function present({
         savedCities,
         providerId,
         placeCredit: Boolean(location?.source === 'auto' && location?.name),
+        timeZone: hasReport && typeof report.timezone === 'string' ? report.timezone : null,
     };
 }

@@ -53,9 +53,9 @@ gzip -9 -n -c "$ROOT/CHANGELOG.md" > "$DOC/changelog.gz"
 cat > "$DOC/changelog.Debian" <<EOF
 ${NAME} (${VERSION}) resolute; urgency=medium
 
-  * Menu en carte : lieu, mesures, heures du jour et semaine sur demande.
+  * Le préavis des notifications se règle de 1 à 12 heures.
 
- -- mathieu <mathieu@localhost>  Fri, 23 Oct 2026 10:15:00 +0300
+ -- mathieu <mathieu@localhost>  Fri, 23 Oct 2026 11:35:00 +0300
 EOF
 gzip -9 -n -f "$DOC/changelog.Debian"
 

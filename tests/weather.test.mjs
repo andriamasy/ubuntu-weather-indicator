@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 
+import {alertsAhead, alertsOneHourAhead} from '../extension/lib/alerts.js';
 import {deserializeCache} from '../extension/lib/cache.js';
 import {APP_VERSION, EXTENSION_UUID} from '../extension/lib/constants.js';
 import {parseReverseGeocode, reverseGeocodeUrl} from '../extension/lib/geocode.js';
@@ -12,6 +13,7 @@ import {likelyRain, present, statusMessage} from '../extension/lib/present.js';
 import {forecastUrl, geocodingUrl, getFallbacks, getProvider} from '../extension/lib/provider.js';
 import {WeatherError, refreshWeather} from '../extension/lib/refresh.js';
 import {
+    clampAlertHours,
     clampRefreshMinutes,
     displayOptions,
     locationFromState,
@@ -20,7 +22,7 @@ import {
     rememberCity,
     roundCoordinate,
 } from '../extension/lib/settings.js';
-import {hourLabel, weekdayIndex} from '../extension/lib/time.js';
+import {forecastHourKey, hourLabel, weekdayIndex} from '../extension/lib/time.js';
 import {
     compass,
     formatPressure,
@@ -136,6 +138,10 @@ test('refresh interval and coordinates stay bounded', () => {
     assert.equal(clampRefreshMinutes(1), 10);
     assert.equal(clampRefreshMinutes(1000), 180);
     assert.equal(clampRefreshMinutes('nope'), 30);
+    assert.equal(clampAlertHours(0), 1);
+    assert.equal(clampAlertHours(2.4), 2);
+    assert.equal(clampAlertHours(40), 12);
+    assert.equal(clampAlertHours('nope'), 1);
     assert.equal(roundCoordinate(48.85661, 'auto'), 48.86);
     assert.equal(roundCoordinate(2.35222, 'manual'), 2.3522);
     assert.equal(roundCoordinate(Number.NaN, 'manual'), null);
@@ -319,6 +325,25 @@ test('unconfigured, failed and loading states do not show a temperature', () => 
     assert.equal(live.model.temperature, '16 °C');
     assert.equal(live.iconName, 'weather-overcast-symbolic');
     assert.equal(statusMessage('unavailable', 'network'), 'Weather unavailable');
+});
+
+test('the displayed hour and temperature follow the current hour', () => {
+    const report = parseForecast(forecast).report;
+    assert.equal(forecastHourKey(new Date('2026-10-23T07:30:00Z'), 'Europe/Paris'), '2026-10-23T09');
+    const view = present({
+        status: 'live',
+        location: paris,
+        report,
+        settings: display,
+        now: new Date('2026-10-23T07:30:00Z'),
+    });
+    assert.equal(view.model.observedAt, '2026-10-23T09:00');
+    assert.equal(view.model.temperature, '13 °C');
+    assert.equal(view.barTemperature, '13 °C');
+    assert.equal(view.model.hourly[0].time, '2026-10-23T09:00');
+    assert.equal(view.model.hourly[0].label, '09:00');
+    assert.equal(view.model.hourly[0].temperature, '13 °C');
+    assert.equal(view.model.hourly.some(item => item.label === '07:00'), false);
 });
 
 test('fahrenheit display converts cached celsius without a new observation', () => {
@@ -511,4 +536,44 @@ test('MET Norway answers when Open-Meteo fails', async () => {
     assert.equal(primary.status, 'live');
     assert.equal(primary.providerId, 'open-meteo');
     assert.equal(primaryCalls, 1);
+});
+
+test('rain and cyclone are announced for the next hour only', () => {
+    const report = {
+        timezone: 'UTC',
+        hourly: [
+            {time: '2026-10-23T10:00', weatherCode: 1, precipitationProbability: 10, windKmh: 40},
+            {time: '2026-10-23T11:00', weatherCode: 61, precipitationProbability: 70, windKmh: 130},
+            {time: '2026-10-23T12:00', weatherCode: 61, precipitationProbability: 80, windKmh: 140},
+        ],
+    };
+    const ahead = alertsOneHourAhead(report, new Date('2026-10-23T10:05:00Z'));
+    assert.equal(ahead.rain.label, '11:00');
+    assert.equal(ahead.rain.probability, 70);
+    assert.equal(ahead.cyclone.windKmh, 130);
+
+    const already = alertsOneHourAhead(report, new Date('2026-10-23T11:20:00Z'));
+    assert.equal(already.rain, null);
+    assert.equal(already.cyclone, null);
+
+    const tooEarly = alertsOneHourAhead(report, new Date('2026-10-23T09:40:00Z'));
+    assert.equal(tooEarly.rain, null);
+    assert.equal(tooEarly.cyclone, null);
+
+    const acrossMidnight = alertsOneHourAhead({
+        timezone: 'Europe/Paris',
+        hourly: [
+            {time: '2026-10-23T23:00', weatherCode: 0, precipitationProbability: 0, windKmh: 10},
+            {time: '2026-10-24T00:00', weatherCode: 2, precipitationProbability: 55, windKmh: 12},
+        ],
+    }, new Date('2026-10-23T21:10:00Z'));
+    assert.equal(acrossMidnight.rain.label, '00:00');
+    assert.equal(acrossMidnight.cyclone, null);
+
+    const twoHours = alertsAhead(report, new Date('2026-10-23T09:40:00Z'), 2);
+    assert.equal(twoHours.rain.label, '11:00');
+    assert.equal(twoHours.cyclone.windKmh, 130);
+    const wider = alertsAhead(report, new Date('2026-10-23T09:40:00Z'), 6);
+    assert.equal(wider.rain.time, twoHours.rain.time);
+    assert.equal(alertsAhead(report, new Date('2026-10-23T11:20:00Z'), 6).rain, null);
 });

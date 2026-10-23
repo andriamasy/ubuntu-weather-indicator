@@ -1,3 +1,12 @@
+# ubuntu-weather-indicator 1.2.5
+
+- Le préavis des notifications se règle de 1 à 12 heures.
+
+# ubuntu-weather-indicator 1.2.4
+
+- L’heure affichée et les cases du jour suivent l’heure actuelle de la ville.
+- Une notification prévient une heure avant la pluie, et une heure avant un vent de force cyclone.
+
 # ubuntu-weather-indicator 1.2.3
 
 - Le menu reprend la carte du lieu : mesures à droite, heures du jour en cases, semaine sur demande.

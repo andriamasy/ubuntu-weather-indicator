@@ -1,6 +1,9 @@
 import {
+    DEFAULT_ALERT_HOURS,
     DEFAULT_REFRESH_MINUTES,
+    MAX_ALERT_HOURS,
     MAX_REFRESH_MINUTES,
+    MIN_ALERT_HOURS,
     MIN_REFRESH_MINUTES,
 } from './constants.js';
 
@@ -15,6 +18,13 @@ export function clampRefreshMinutes(value) {
     if (!Number.isFinite(number))
         return DEFAULT_REFRESH_MINUTES;
     return Math.min(MAX_REFRESH_MINUTES, Math.max(MIN_REFRESH_MINUTES, Math.round(number)));
+}
+
+export function clampAlertHours(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number))
+        return DEFAULT_ALERT_HOURS;
+    return Math.min(MAX_ALERT_HOURS, Math.max(MIN_ALERT_HOURS, Math.round(number)));
 }
 
 export function roundCoordinate(value, source) {

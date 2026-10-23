@@ -95,6 +95,11 @@
       <range min="10" max="180"/>
       <summary>Refresh interval in minutes</summary>
     </key>
+    <key name="alert-hours" type="i">
+      <default>1</default>
+      <range min="1" max="12"/>
+      <summary>Hours of notice before rain or cyclone wind</summary>
+    </key>
     <key name="show-icon" type="b">
       <default>true</default>
     </key>

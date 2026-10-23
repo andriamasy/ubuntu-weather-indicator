@@ -8,7 +8,7 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 import {SoupJsonClient} from './client.js';
 import {EXTENSION_UUID} from './lib/constants.js';
 import {openMeteoProvider} from './lib/provider.js';
-import {clampRefreshMinutes, forgetCity, placeKey, rememberCity, savedCitiesFromState} from './lib/settings.js';
+import {clampAlertHours, clampRefreshMinutes, forgetCity, placeKey, rememberCity, savedCitiesFromState} from './lib/settings.js';
 
 export default class UbuntuWeatherPreferences extends ExtensionPreferences {
     async fillPreferencesWindow(window) {
@@ -175,6 +175,24 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
         });
         refresh.add(spin);
         page.add(refresh);
+
+        const notices = new Adw.PreferencesGroup({title: _('Notifications')});
+        const notice = new Adw.SpinRow({
+            title: _('Notice before rain or cyclone'),
+            subtitle: _('Hours in advance, from 1 to 12.'),
+            adjustment: new Gtk.Adjustment({
+                lower: 1,
+                upper: 12,
+                step_increment: 1,
+                page_increment: 1,
+                value: settings.get_int('alert-hours'),
+            }),
+        });
+        notice.connect('notify::value', () => {
+            settings.set_int('alert-hours', clampAlertHours(notice.value));
+        });
+        notices.add(notice);
+        page.add(notices);
         return page;
     }
 

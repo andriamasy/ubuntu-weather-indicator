@@ -6,6 +6,7 @@ import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {placeKey} from './lib/settings.js';
+import {hourKey} from './lib/time.js';
 
 function clearChildren(actor) {
     for (const child of actor.get_children())
@@ -112,6 +113,7 @@ export class WeatherMenu {
     _build(presentation) {
         const t = this._translate;
         const model = presentation.model;
+        this._timeZone = presentation.timeZone || null;
         this._root.add_child(this._header(presentation, t));
         if (model)
             this._root.add_child(this._hero(model, presentation, t));
@@ -324,12 +326,37 @@ export class WeatherMenu {
         return row;
     }
 
+    _hourKeyNow() {
+        let zone = GLib.TimeZone.new_local();
+        if (typeof this._timeZone === 'string' && this._timeZone.trim()) {
+            try {
+                zone = GLib.TimeZone.new(this._timeZone.trim());
+            } catch {
+                zone = GLib.TimeZone.new_local();
+            }
+        }
+        const now = GLib.DateTime.new_now(zone);
+        const month = String(now.get_month()).padStart(2, '0');
+        const day = String(now.get_day_of_month()).padStart(2, '0');
+        const hour = String(now.get_hour()).padStart(2, '0');
+        return `${now.get_year()}-${month}-${day}T${hour}`;
+    }
+
     _hours(model) {
-        const hours = model?.hourly?.slice(0, 8) ?? [];
+        const all = model?.hourly ?? [];
+        const key = this._hourKeyNow();
+        const start = all.findIndex(hour => {
+            const itemKey = hourKey(hour.time || '');
+            return itemKey && itemKey >= key;
+        });
+        const hours = (start >= 0 ? all.slice(start) : all).slice(0, 8);
         if (hours.length === 0)
             return null;
         const row = new St.BoxLayout({style_class: 'weather-hourly', x_expand: true});
-        hours.forEach((hour, index) => row.add_child(this._hourCard(hour, index === 0)));
+        for (const hour of hours) {
+            const current = hourKey(hour.time || '') === key;
+            row.add_child(this._hourCard(hour, current));
+        }
         return row;
     }
 

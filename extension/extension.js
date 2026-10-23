@@ -1,13 +1,16 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {WeatherService} from './client.js';
 import {Indicator} from './indicator.js';
 import {AutoLocation} from './location.js';
+import {alertsAhead} from './lib/alerts.js';
 import {present} from './lib/present.js';
 import {
+    clampAlertHours,
     clampRefreshMinutes,
     displayOptions,
     locationFromState,
@@ -37,6 +40,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         this._disposed = false;
         this._refreshToken = 0;
         this._timer = 0;
+        this._hourTimer = 0;
         this._debounce = 0;
         this._settingsId = 0;
         this._themeId = 0;
@@ -44,6 +48,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         this._lastPresentation = null;
         this._namedKey = null;
         this._placeToken = 0;
+        this._sentAlerts = new Set();
         this._logger = this.getLogger();
 
         try {
@@ -101,6 +106,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         this._disposed = true;
         this._refreshToken++;
         this._clearTimer();
+        this._clearHour();
         this._clearDebounce();
         if (this._network && this._networkId) {
             this._network.disconnect(this._networkId);
@@ -134,6 +140,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
             ...fields,
             settings: displayOptions(state),
             savedCities: savedCitiesFromState(state),
+            now: new Date(),
         });
     }
 
@@ -245,6 +252,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
             report: peeked.report,
             providerId: peeked.providerId,
         }), new Date(peeked.updatedAtMs).toISOString());
+        this._noteWeather(peeked.report, location);
     }
 
     _scheduleRefresh(milliseconds, force) {
@@ -276,6 +284,43 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
             GLib.source_remove(this._timer);
             this._timer = 0;
         }
+    }
+
+    _clearHour() {
+        if (this._hourTimer) {
+            GLib.source_remove(this._hourTimer);
+            this._hourTimer = 0;
+        }
+    }
+
+    _armHour(timeZone) {
+        this._clearHour();
+        if (this._disposed)
+            return;
+        let zone = GLib.TimeZone.new_local();
+        if (typeof timeZone === 'string' && timeZone.trim()) {
+            try {
+                zone = GLib.TimeZone.new(timeZone.trim());
+            } catch {
+                zone = GLib.TimeZone.new_local();
+            }
+        }
+        const now = GLib.DateTime.new_now(zone);
+        const start = GLib.DateTime.new(
+            zone,
+            now.get_year(),
+            now.get_month(),
+            now.get_day_of_month(),
+            now.get_hour(),
+            0,
+            0);
+        const seconds = Math.max(1, Math.ceil(start.add_hours(1).difference(now) / GLib.USEC_PER_SEC));
+        this._hourTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
+            this._hourTimer = 0;
+            if (!this._disposed)
+                this._renderCached();
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _clearDebounce() {
@@ -312,6 +357,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
                 report: peeked.report,
                 providerId: peeked.providerId,
             }), new Date(peeked.updatedAtMs).toISOString());
+            this._noteWeather(peeked.report, location);
             return;
         }
         if (peeked) {
@@ -322,6 +368,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
                 report: peeked.report,
                 providerId: peeked.providerId,
             }), new Date(peeked.updatedAtMs).toISOString());
+            this._noteWeather(peeked.report, location);
         } else {
             this._show(this._present(state, {
                 status: 'loading',
@@ -350,11 +397,56 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
             report: result.report,
             providerId: result.providerId,
         }), result.updatedAt);
+        this._noteWeather(result.report, result.location);
+    }
+
+    _noteWeather(report, location) {
+        if (!report || !location || !this._sentAlerts)
+            return;
+        let place;
+        try {
+            place = placeKey(location);
+        } catch {
+            return;
+        }
+        const lead = clampAlertHours(this._settings?.get_int('alert-hours'));
+        const alerts = alertsAhead(report, new Date(), lead);
+        if (alerts.rain)
+            this._notifyOnce(`rain:${place}:${alerts.rain.time}`, _('Rain soon'), this._rainBody(alerts.rain));
+        if (alerts.cyclone)
+            this._notifyOnce(`cyclone:${place}:${alerts.cyclone.time}`, _('Cyclone soon'), this._cycloneBody(alerts.cyclone));
+    }
+
+    _rainBody(alert) {
+        const when = typeof alert.probability === 'number'
+            ? `${alert.label}, ${Math.round(alert.probability)} %`
+            : alert.label;
+        return _('Rain likely at %s').replace('%s', when);
+    }
+
+    _cycloneBody(alert) {
+        const when = typeof alert.windKmh === 'number'
+            ? `${alert.label}, ${Math.round(alert.windKmh)} km/h`
+            : alert.label;
+        return _('Cyclone wind expected at %s').replace('%s', when);
+    }
+
+    _notifyOnce(id, title, body) {
+        if (this._sentAlerts.has(id))
+            return;
+        this._sentAlerts.add(id);
+        try {
+            Main.notify(title, body);
+        } catch (error) {
+            this._sentAlerts.delete(id);
+            this._logger?.warn?.(`Notification failed: ${error?.message || error}`);
+        }
     }
 
     _show(view, updatedAt) {
         view.updatedAt = updatedAt;
         this._lastPresentation = view;
         this._indicator?.update(view);
+        this._armHour(view.model ? view.timeZone : null);
     }
 }

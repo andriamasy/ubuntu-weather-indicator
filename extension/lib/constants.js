@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.2.3';
+export const APP_VERSION = '1.2.5';
 export const EXTENSION_UUID = 'ubuntu-weather-indicator@lunix';
 export const SCHEMA_ID = 'org.gnome.shell.extensions.ubuntu-weather-indicator';
 export const GETTEXT_DOMAIN = 'ubuntu-weather-indicator';
@@ -11,3 +11,6 @@ export const REQUEST_TIMEOUT_SECONDS = 10;
 export const DEFAULT_REFRESH_MINUTES = 30;
 export const MIN_REFRESH_MINUTES = 10;
 export const MAX_REFRESH_MINUTES = 180;
+export const DEFAULT_ALERT_HOURS = 1;
+export const MIN_ALERT_HOURS = 1;
+export const MAX_ALERT_HOURS = 12;

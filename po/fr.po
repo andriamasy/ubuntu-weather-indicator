@@ -194,6 +194,15 @@ msgstr "Actualiser"
 msgid "Refresh interval"
 msgstr "Intervalle d’actualisation"
 
+msgid "Notifications"
+msgstr "Notifications"
+
+msgid "Notice before rain or cyclone"
+msgstr "Préavis avant la pluie ou un cyclone"
+
+msgid "Hours in advance, from 1 to 12."
+msgstr "Heures d’avance, de 1 à 12."
+
 msgid "Results"
 msgstr "Résultats"
 
@@ -373,6 +382,15 @@ msgstr "Utiliser la localisation automatique"
 
 msgid "Local weather"
 msgstr "Météo locale"
+
+msgid "Rain soon"
+msgstr "Pluie bientôt"
+
+msgid "Cyclone soon"
+msgstr "Cyclone bientôt"
+
+msgid "Cyclone wind expected at %s"
+msgstr "Vent de force cyclone prévu à %s"
 
 msgid "Weather data provided by:"
 msgstr "Données météo fournies par :"
