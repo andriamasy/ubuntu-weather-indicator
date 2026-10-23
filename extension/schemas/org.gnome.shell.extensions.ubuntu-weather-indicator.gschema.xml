@@ -42,6 +42,22 @@
       <default>0</default>
       <summary>Automatic longitude rounded to city precision</summary>
     </key>
+    <key name="auto-city-name" type="s">
+      <default>''</default>
+      <summary>City name for the automatic location</summary>
+    </key>
+    <key name="auto-country-name" type="s">
+      <default>''</default>
+      <summary>Country name for the automatic location</summary>
+    </key>
+    <key name="auto-admin-name" type="s">
+      <default>''</default>
+      <summary>Region name for the automatic location</summary>
+    </key>
+    <key name="saved-cities" type="s">
+      <default>'[]'</default>
+      <summary>JSON list of saved cities</summary>
+    </key>
     <key name="auto-ready" type="b">
       <default>false</default>
       <summary>An automatic fix has been received</summary>
@@ -65,6 +81,14 @@
         <choice value="mph"/>
         <choice value="kn"/>
       </choices>
+    </key>
+    <key name="pressure-unit" type="s">
+      <default>'hpa'</default>
+      <choices>
+        <choice value="hpa"/>
+        <choice value="inhg"/>
+      </choices>
+      <summary>Pressure unit</summary>
     </key>
     <key name="refresh-minutes" type="i">
       <default>30</default>

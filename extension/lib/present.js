@@ -9,6 +9,17 @@ import {
 } from './units.js';
 import {hourLabel, weekdayIndex} from './time.js';
 
+const RAIN_LIKELY_PERCENT = 40;
+
+export function likelyRain(hourly) {
+    if (!Array.isArray(hourly))
+        return null;
+    return hourly.find(item => {
+        return typeof item?.precipitationProbability === 'number'
+            && item.precipitationProbability >= RAIN_LIKELY_PERCENT;
+    }) || null;
+}
+
 function details(report, settings) {
     const unit = settings.temperatureUnit;
     const windUnit = settings.windSpeedUnit;
@@ -18,7 +29,7 @@ function details(report, settings) {
         apparent: formatTemperature(report.apparentC, unit),
         humidity: formatPercent(report.humidity),
         cloudCover: formatPercent(report.cloudCover),
-        pressure: formatPressure(report.pressureHpa),
+        pressure: formatPressure(report.pressureHpa, settings.pressureUnit),
         wind: formatWind(report.windKmh, windUnit),
         windArrow: windArrow(report.windDirectionDeg),
         precipitation: formatMillimetres(report.precipitationMm),
@@ -50,6 +61,15 @@ function details(report, settings) {
                 precipitationProbability: formatPercent(item.precipitationProbability),
             };
         }),
+        upcomingRain: (() => {
+            const rain = likelyRain(report.hourly);
+            if (!rain)
+                return null;
+            return {
+                label: hourLabel(rain.time),
+                probability: formatPercent(rain.precipitationProbability),
+            };
+        })(),
     };
 }
 
@@ -89,12 +109,20 @@ export function statusMessage(status, errorCode) {
     return null;
 }
 
-export function present({status, errorCode = null, location = null, report = null, settings}) {
+export function present({
+    status,
+    errorCode = null,
+    location = null,
+    report = null,
+    settings,
+    savedCities = [],
+    providerId = 'open-meteo',
+}) {
     const hasReport = (status === 'live' || status === 'stale') && report;
     const model = hasReport ? details(report, settings) : null;
     const showIcon = Boolean(settings.showIcon) && settings.barFormat !== 'temp';
     const showTemperature = Boolean(settings.showTemperature) && settings.barFormat !== 'icon';
-    const showCity = settings.barFormat === 'icon-temp-city' && hasReport && location?.source !== 'auto';
+    const showCity = settings.barFormat === 'icon-temp-city' && hasReport && Boolean(location?.name);
 
     let iconName = null;
     let barTemperature = null;
@@ -122,5 +150,8 @@ export function present({status, errorCode = null, location = null, report = nul
         barCity: showCity ? (location.name || '') : '',
         location,
         model,
+        savedCities,
+        providerId,
+        placeCredit: Boolean(location?.source === 'auto' && location?.name),
     };
 }

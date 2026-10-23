@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 export const EXTENSION_UUID = 'ubuntu-weather-indicator@lunix';
 export const SCHEMA_ID = 'org.gnome.shell.extensions.ubuntu-weather-indicator';
 export const GETTEXT_DOMAIN = 'ubuntu-weather-indicator';

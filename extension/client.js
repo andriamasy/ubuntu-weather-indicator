@@ -4,8 +4,9 @@ import Soup from 'gi://Soup?version=3.0';
 
 import {REQUEST_TIMEOUT_SECONDS, USER_AGENT} from './lib/constants.js';
 import {deserializeCache, serializeCache} from './lib/cache.js';
+import {parseReverseGeocode, reverseGeocodeUrl} from './lib/geocode.js';
 import {WeatherError, refreshWeather} from './lib/refresh.js';
-import {getProvider} from './lib/provider.js';
+import {getFallbacks, getProvider} from './lib/provider.js';
 import {clampRefreshMinutes, locationFromState, placeKey} from './lib/settings.js';
 import {evaluateCache} from './lib/cache.js';
 
@@ -131,11 +132,12 @@ export class WeatherService {
         const provider = getProvider(state.provider);
         if (!location || !provider || !this._cache)
             return null;
+        const accepted = [provider.id, ...getFallbacks(provider.id).map(item => item.id)];
         const intervalMs = clampRefreshMinutes(state.refreshMinutes) * 60 * 1000;
         const verdict = evaluateCache(
             this._cache,
             placeKey(location),
-            provider.id,
+            accepted,
             Date.now(),
             intervalMs);
         if (!verdict.usable)
@@ -144,7 +146,13 @@ export class WeatherService {
             fresh: verdict.fresh,
             report: this._cache.report,
             updatedAtMs: this._cache.savedAtMs,
+            providerId: this._cache.providerId,
         };
+    }
+
+    async lookupPlace(latitude, longitude, locale) {
+        const payload = await this._client.getJson(reverseGeocodeUrl(latitude, longitude, locale));
+        return parseReverseGeocode(payload);
     }
 
     refresh(args) {
@@ -162,6 +170,7 @@ export class WeatherService {
         const result = await refreshWeather({
             fetchJson: url => this._client.getJson(url),
             provider,
+            fallbacks: provider ? getFallbacks(provider.id) : [],
             location,
             cache: this._cache,
             nowMs: Date.now(),
@@ -176,6 +185,7 @@ export class WeatherService {
             errorCode: result.errorCode,
             report: result.report,
             location,
+            providerId: result.providerId,
             updatedAt: updatedAtMs ? new Date(updatedAtMs).toISOString() : null,
         };
     }

@@ -104,3 +104,29 @@
 .weather-tool:hover {
     background-color: rgba(255, 255, 255, 0.08);
 }
+
+.weather-cities {
+    spacing: 8px;
+}
+
+.weather-city {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.weather-city-active {
+    font-weight: bold;
+}
+
+.weather-city-caption {
+    font-size: 0.85em;
+}
+
+.weather-rain {
+    font-weight: bold;
+}
+
+.weather-place-credit {
+    font-size: 0.85em;
+}

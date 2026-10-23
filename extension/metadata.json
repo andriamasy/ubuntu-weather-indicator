@@ -5,8 +5,7 @@
   "shell-version": ["50"],
   "gettext-domain": "ubuntu-weather-indicator",
   "settings-schema": "org.gnome.shell.extensions.ubuntu-weather-indicator",
-  "version": 1,
-  "version-name": "1.0.0",
-  "session-modes": ["user"],
+  "version": 2,
+  "version-name": "1.1.0",
   "url": "https://github.com/andriamasy/ubuntu-weather-indicator"
 }

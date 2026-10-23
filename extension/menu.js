@@ -4,6 +4,8 @@ import St from 'gi://St';
 
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import {placeKey} from './lib/settings.js';
+
 function clearChildren(actor) {
     for (const child of actor.get_children())
         child.destroy();
@@ -33,19 +35,26 @@ function clockLabel(iso) {
 }
 
 function placeLine(location, t) {
+    if (location?.name)
+        return [location.name, location.admin, location.country].filter(Boolean).join(', ');
     if (location?.source === 'auto')
         return t('Current location');
-    if (!location?.name)
-        return t('Weather');
-    return [location.name, location.admin, location.country].filter(Boolean).join(', ');
+    return t('Weather');
+}
+
+function sameCity(location, city) {
+    if (!location || location.source !== 'manual' || !city)
+        return false;
+    return placeKey(location) === placeKey({...city, source: 'manual'});
 }
 
 export class WeatherMenu {
-    constructor({menu, translate, onRefresh, onPreferences}) {
+    constructor({menu, translate, onRefresh, onPreferences, onSelectCity}) {
         this._menu = menu;
         this._translate = translate;
         this._onRefresh = onRefresh;
         this._onPreferences = onPreferences;
+        this._onSelectCity = onSelectCity;
         menu.box?.add_style_class_name?.('weather-popup');
 
         this._item = new PopupMenu.PopupBaseMenuItem({
@@ -83,10 +92,17 @@ export class WeatherMenu {
             x_expand: true,
         });
         summary.add_child(label(placeLine(presentation.location, t), 'weather-place'));
+        if (presentation.placeCredit)
+            summary.add_child(label(t('Place name by OpenStreetMap'), 'weather-place-credit'));
         if (model) {
             summary.add_child(label(
                 `${t(model.conditionName)}, ${model.temperature}`,
                 'weather-headline'));
+            if (model.upcomingRain?.label) {
+                summary.add_child(label(
+                    t('Rain likely at %s').replace('%s', `${model.upcomingRain.label}, ${model.upcomingRain.probability}`),
+                    'weather-rain'));
+            }
             summary.add_child(this._sunRow(model, presentation));
         } else if (presentation.message) {
             summary.add_child(label(t(presentation.message), 'weather-headline'));
@@ -96,6 +112,9 @@ export class WeatherMenu {
         if (model)
             top.add_child(this._stats(model, t));
         this._root.add_child(top);
+        const cities = this._cityRow(presentation, t);
+        if (cities)
+            this._root.add_child(cities);
 
         const days = model?.daily?.slice(0, 2) ?? [];
         if (days.length > 0) {
@@ -183,10 +202,13 @@ export class WeatherMenu {
         const row = new St.BoxLayout({style_class: 'weather-footer', x_expand: true});
         row.add_child(this._tool('find-location-symbolic', () => this._onPreferences()));
         row.add_child(this._tool('view-refresh-symbolic', () => this._onRefresh()));
-        row.add_child(label(
-            t('Weather data provided by: Open-Meteo'),
-            'weather-attribution',
-            {x_expand: true, x_align: Clutter.ActorAlign.CENTER}));
+        const credit = presentation.providerId === 'met-no'
+            ? t('Weather data provided by: MET Norway')
+            : t('Weather data provided by: Open-Meteo');
+        row.add_child(label(credit, 'weather-attribution', {
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+        }));
         row.add_child(this._tool('emblem-system-symbolic', () => this._onPreferences()));
         return row;
     }
@@ -200,6 +222,28 @@ export class WeatherMenu {
         });
         button.connect('clicked', () => action());
         return button;
+    }
+
+    _cityRow(presentation, t) {
+        const cities = presentation.savedCities || [];
+        if (cities.length < 2 || !this._onSelectCity)
+            return null;
+        const row = new St.BoxLayout({style_class: 'weather-cities', x_expand: true});
+        for (const city of cities) {
+            const active = sameCity(presentation.location, city);
+            const button = new St.Button({
+                style_class: active ? 'weather-city weather-city-active' : 'weather-city',
+                label: city.name,
+                can_focus: true,
+                track_hover: true,
+            });
+            button.connect('clicked', () => this._onSelectCity(city));
+            row.add_child(button);
+        }
+        row.add_child(label(t('Saved cities'), 'weather-city-caption', {
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        return row;
     }
 
     _dateParts(day) {
@@ -223,5 +267,6 @@ export class WeatherMenu {
         this._menu = null;
         this._onRefresh = null;
         this._onPreferences = null;
+        this._onSelectCity = null;
     }
 }

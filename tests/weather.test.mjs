@@ -4,16 +4,19 @@ import test from 'node:test';
 
 import {deserializeCache} from '../extension/lib/cache.js';
 import {APP_VERSION, EXTENSION_UUID} from '../extension/lib/constants.js';
+import {parseReverseGeocode, reverseGeocodeUrl} from '../extension/lib/geocode.js';
+import {parseMetForecast} from '../extension/lib/met.js';
 import {parseForecast, parseGeocoding} from '../extension/lib/parse.js';
 import {insertionIndex} from '../extension/lib/placement.js';
-import {present, statusMessage} from '../extension/lib/present.js';
-import {forecastUrl, geocodingUrl, getProvider} from '../extension/lib/provider.js';
+import {likelyRain, present, statusMessage} from '../extension/lib/present.js';
+import {forecastUrl, geocodingUrl, getFallbacks, getProvider} from '../extension/lib/provider.js';
 import {WeatherError, refreshWeather} from '../extension/lib/refresh.js';
 import {
     clampRefreshMinutes,
     displayOptions,
     locationFromState,
     placeKey,
+    rememberCity,
     roundCoordinate,
 } from '../extension/lib/settings.js';
 import {hourLabel, weekdayIndex} from '../extension/lib/time.js';
@@ -111,7 +114,9 @@ test('units convert from the canonical Open-Meteo values', () => {
     assert.equal(formatWind(16.6, 'kmh'), '16.6 km/h');
     assert.equal(formatWind(36, 'ms'), '10.0 m/s');
     assert.equal(formatWind(1.852, 'kn'), '1 kn');
-    assert.equal(formatPressure(1013), '29.9 inHg');
+    assert.equal(formatPressure(1013), '1013 hPa');
+    assert.equal(formatPressure(1013, 'inhg'), '29.9 inHg');
+    assert.equal(formatPressure(null), null);
     assert.equal(windArrow(270), '←');
     assert.equal(compass(0), 'N');
     assert.equal(compass(219), 'SW');
@@ -167,6 +172,17 @@ test('manual and automatic locations do not fall back to a fake city', () => {
     assert.equal(automatic.source, 'auto');
     assert.equal(automatic.name, '');
     assert.equal(automatic.latitude, 45.75);
+    const named = locationFromState({
+        useAutoLocation: true,
+        autoReady: true,
+        autoLatitude: 45.751,
+        autoLongitude: 4.849,
+        autoCityName: 'Lyon',
+        autoCountryName: 'France',
+        autoAdminName: 'Auvergne-Rhône-Alpes',
+    });
+    assert.equal(named.name, 'Lyon');
+    assert.equal(named.country, 'France');
     assert.notEqual(placeKey(automatic), placeKey(manual));
 });
 
@@ -363,4 +379,131 @@ test('forecast URL is HTTPS, has no API key and uses the rounded coordinates', (
     assert.match(search, /language=fr/);
     assert.match(search, /name=S%C3%A3o%20Paulo/);
     assert.equal(getProvider('missing'), null);
+    assert.equal(getFallbacks('open-meteo')[0].id, 'met-no');
+    const reverse = reverseGeocodeUrl(48.86, 2.35, 'fr_FR.UTF-8');
+    assert.match(reverse, /^https:\/\/nominatim\.openstreetmap\.org\/reverse\?/);
+    assert.match(reverse, /accept-language=fr/);
+    assert.equal(parseReverseGeocode({
+        lat: '48.86',
+        lon: '2.35',
+        address: {city: 'Paris', state: 'Île-de-France', country: 'France'},
+    }).name, 'Paris');
+    assert.equal(parseReverseGeocode({}), null);
+});
+
+test('saved cities keep the newest choice and ignore duplicates', () => {
+    const lyon = {name: 'Lyon', country: 'France', admin: '', latitude: 45.7491, longitude: 4.8479, timezone: 'Europe/Paris'};
+    const parisCity = {name: 'Paris', country: 'France', admin: '', latitude: 48.8566, longitude: 2.3522, timezone: 'Europe/Paris'};
+    const again = {name: 'Lyon', country: 'France', admin: 'Rhône', latitude: 45.74912, longitude: 4.84788, timezone: 'Europe/Paris'};
+    let cities = rememberCity([], lyon);
+    cities = rememberCity(cities, parisCity);
+    cities = rememberCity(cities, again);
+    assert.equal(cities.length, 2);
+    assert.equal(cities[0].name, 'Lyon');
+    assert.equal(cities[0].admin, 'Rhône');
+    const padded = Array.from({length: 8}, (_, index) => ({
+        name: `City ${index}`,
+        country: 'France',
+        admin: '',
+        latitude: 45 + index / 10,
+        longitude: 4,
+        timezone: '',
+    }));
+    assert.equal(rememberCity([], null).length, 0);
+    assert.equal(padded.reduce((list, city) => rememberCity(list, city), []).length, 6);
+});
+
+test('the first likely rain hour is reported and dry hours are skipped', () => {
+    const dry = likelyRain([
+        {time: '2026-10-23T16:00', precipitationProbability: 10},
+        {time: '2026-10-23T17:00', precipitationProbability: 20},
+    ]);
+    assert.equal(dry, null);
+    const rain = likelyRain([
+        {time: '2026-10-23T16:00', precipitationProbability: 10},
+        {time: '2026-10-23T18:00', precipitationProbability: 70},
+    ]);
+    assert.equal(rain.time, '2026-10-23T18:00');
+});
+
+test('MET Norway answers when Open-Meteo fails', async () => {
+    const metPayload = {
+        properties: {
+            timeseries: [
+                {
+                    time: '2026-10-23T12:00:00Z',
+                    data: {
+                        instant: {
+                            details: {
+                                air_pressure_at_sea_level: 1013,
+                                air_temperature: 15.5,
+                                cloud_area_fraction: 20,
+                                relative_humidity: 60,
+                                wind_from_direction: 180,
+                                wind_speed: 3,
+                            },
+                        },
+                        next_1_hours: {
+                            summary: {symbol_code: 'clearsky_day'},
+                            details: {precipitation_amount: 0, probability_of_precipitation: 10},
+                        },
+                    },
+                },
+                {
+                    time: '2026-10-23T18:00:00Z',
+                    data: {
+                        instant: {details: {air_temperature: 12, wind_speed: 2}},
+                        next_1_hours: {
+                            summary: {symbol_code: 'rain_night'},
+                            details: {precipitation_amount: 1.2, probability_of_precipitation: 70},
+                        },
+                    },
+                },
+            ],
+        },
+    };
+    const parsed = parseMetForecast(metPayload);
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.report.temperatureC, 15.5);
+    assert.equal(parsed.report.weatherCode, 0);
+    assert.equal(parsed.report.windKmh, 10.8);
+    assert.equal(likelyRain(parsed.report.hourly).precipitationProbability, 70);
+    assert.equal(parseMetForecast({properties: {timeseries: []}}).ok, false);
+
+    const calls = [];
+    const result = await refreshWeather({
+        fetchJson: async url => {
+            calls.push(url);
+            if (url.includes('open-meteo'))
+                throw new WeatherError('network');
+            return metPayload;
+        },
+        provider: getProvider('open-meteo'),
+        fallbacks: getFallbacks('open-meteo'),
+        location: paris,
+        cache: null,
+        nowMs: 5_000,
+        intervalMinutes: 30,
+    });
+    assert.equal(result.status, 'live');
+    assert.equal(result.providerId, 'met-no');
+    assert.equal(result.report.temperatureC, 15.5);
+    assert.equal(calls.length, 2);
+
+    let primaryCalls = 0;
+    const primary = await refreshWeather({
+        fetchJson: async () => {
+            primaryCalls += 1;
+            return forecast;
+        },
+        provider: getProvider('open-meteo'),
+        fallbacks: getFallbacks('open-meteo'),
+        location: paris,
+        cache: null,
+        nowMs: 5_000,
+        intervalMinutes: 30,
+    });
+    assert.equal(primary.status, 'live');
+    assert.equal(primary.providerId, 'open-meteo');
+    assert.equal(primaryCalls, 1);
 });

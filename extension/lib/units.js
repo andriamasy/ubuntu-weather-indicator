@@ -62,10 +62,12 @@ export function windArrow(degrees) {
     return WIND_ARROWS[Math.round(normalized / 45) % 8];
 }
 
-export function formatPressure(hpa) {
+export function formatPressure(hpa, unit = 'hpa') {
     if (typeof hpa !== 'number' || !Number.isFinite(hpa) || hpa <= 0)
         return null;
-    return `${(hpa * 0.029529983071445).toFixed(1)} inHg`;
+    if (unit === 'inhg')
+        return `${(hpa * 0.029529983071445).toFixed(1)} inHg`;
+    return `${Math.round(hpa)} hPa`;
 }
 
 const COMPASS = [

@@ -1,6 +1,6 @@
 # Ajouter un fournisseur météo
 
-Open-Meteo est le seul fournisseur livré. Le code qui parle au réseau est séparé de l’indicateur.
+Open-Meteo est le fournisseur principal. Si sa réponse échoue, l’extension demande la même prévision à MET Norway, sans clé. Le code qui parle au réseau est séparé de l’indicateur.
 
 ## Contrat
 

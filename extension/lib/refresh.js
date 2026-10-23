@@ -11,6 +11,7 @@ export class WeatherError extends Error {
 export async function refreshWeather({
     fetchJson,
     provider,
+    fallbacks = [],
     location,
     cache,
     nowMs,
@@ -38,7 +39,9 @@ export async function refreshWeather({
 
     const key = placeKey(location);
     const intervalMs = clampRefreshMinutes(intervalMinutes) * 60 * 1000;
-    const cached = evaluateCache(cache, key, provider.id, nowMs, intervalMs);
+    const candidates = [provider, ...(fallbacks || [])].filter(Boolean);
+    const accepted = [...new Set(candidates.map(item => item.id))];
+    const cached = evaluateCache(cache, key, accepted, nowMs, intervalMs);
 
     if (cached.fresh && !force) {
         return {
@@ -47,61 +50,52 @@ export async function refreshWeather({
             cache,
             errorCode: null,
             fromCache: true,
+            providerId: cache.providerId,
         };
     }
 
-    try {
-        const raw = await fetchJson(provider.forecastUrl(location));
-        const parsed = provider.parseForecast(raw);
-        if (!parsed.ok || !parsed.report) {
-            if (cached.usable) {
-                return {
-                    status: 'stale',
-                    report: cache.report,
-                    cache,
-                    errorCode: 'invalid',
-                    fromCache: true,
-                };
-            }
+    let lastCode = 'network';
+    for (const candidate of candidates) {
+        try {
+            const raw = await fetchJson(candidate.forecastUrl(location));
+            const parsed = candidate.parseForecast(raw);
+            if (!parsed.ok || !parsed.report)
+                throw new WeatherError('invalid');
+            const next = {
+                savedAtMs: nowMs,
+                placeKey: key,
+                providerId: candidate.id,
+                report: parsed.report,
+            };
             return {
-                status: 'unavailable',
-                report: null,
-                cache: cached.usable ? cache : null,
-                errorCode: 'invalid',
+                status: 'live',
+                report: parsed.report,
+                cache: next,
+                errorCode: null,
                 fromCache: false,
+                providerId: candidate.id,
             };
+        } catch (error) {
+            lastCode = error && error.code ? error.code : 'network';
         }
+    }
 
-        const next = {
-            savedAtMs: nowMs,
-            placeKey: key,
-            providerId: provider.id,
-            report: parsed.report,
-        };
+    if (cached.usable) {
         return {
-            status: 'live',
-            report: parsed.report,
-            cache: next,
-            errorCode: null,
-            fromCache: false,
-        };
-    } catch (error) {
-        const code = error && error.code ? error.code : 'network';
-        if (cached.usable) {
-            return {
-                status: 'stale',
-                report: cache.report,
-                cache,
-                errorCode: code,
-                fromCache: true,
-            };
-        }
-        return {
-            status: 'unavailable',
-            report: null,
-            cache: null,
-            errorCode: code,
-            fromCache: false,
+            status: 'stale',
+            report: cache.report,
+            cache,
+            errorCode: lastCode,
+            fromCache: true,
+            providerId: cache.providerId,
         };
     }
+    return {
+        status: 'unavailable',
+        report: null,
+        cache: null,
+        errorCode: lastCode,
+        fromCache: false,
+        providerId: null,
+    };
 }

@@ -328,3 +328,27 @@ msgstr "Vent"
 
 msgid "Wind speed"
 msgstr "Vitesse du vent"
+
+msgid "Hectopascals"
+msgstr "Hectopascals"
+
+msgid "Inches of mercury"
+msgstr "Pouces de mercure"
+
+msgid "Pressure unit"
+msgstr "Unité de pression"
+
+msgid "Rain likely at %s"
+msgstr "Pluie probable à %s"
+
+msgid "Weather data provided by: MET Norway"
+msgstr "Données météo fournies par : MET Norway"
+
+msgid "Saved cities"
+msgstr "Villes enregistrées"
+
+msgid "Place name by OpenStreetMap"
+msgstr "Nom du lieu : OpenStreetMap"
+
+msgid "Fallback forecast, no API key"
+msgstr "Prévision de secours, sans clé API"

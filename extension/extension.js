@@ -7,7 +7,14 @@ import {WeatherService} from './client.js';
 import {Indicator} from './indicator.js';
 import {AutoLocation} from './location.js';
 import {present} from './lib/present.js';
-import {clampRefreshMinutes, displayOptions, locationFromState} from './lib/settings.js';
+import {
+    clampRefreshMinutes,
+    displayOptions,
+    locationFromState,
+    placeKey,
+    rememberCity,
+    savedCitiesFromState,
+} from './lib/settings.js';
 import {readGSettings} from './state.js';
 
 const REFRESH_KEYS = new Set([
@@ -35,6 +42,8 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         this._themeId = 0;
         this._networkId = 0;
         this._lastPresentation = null;
+        this._namedKey = null;
+        this._placeToken = 0;
         this._logger = this.getLogger();
 
         try {
@@ -46,6 +55,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
                     this._refresh(true);
                 },
                 onPreferences: () => this.openPreferences(),
+                onSelectCity: city => this._selectSavedCity(city),
                 logger: this._logger,
             });
             this._place();
@@ -113,7 +123,66 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         this._service = null;
         this._settings = null;
         this._lastPresentation = null;
+        this._namedKey = null;
         this._logger = null;
+    }
+
+    _present(state, fields) {
+        return present({
+            providerId: 'open-meteo',
+            ...fields,
+            settings: displayOptions(state),
+            savedCities: savedCitiesFromState(state),
+        });
+    }
+
+    _selectSavedCity(city) {
+        if (this._disposed || !this._settings || !city)
+            return;
+        const state = readGSettings(this._settings);
+        const list = rememberCity(savedCitiesFromState(state), city);
+        this._settings.set_string('saved-cities', JSON.stringify(list));
+        this._settings.set_string('city-name', city.name);
+        this._settings.set_string('country-name', city.country || '');
+        this._settings.set_string('admin-name', city.admin || '');
+        this._settings.set_string('timezone', city.timezone || '');
+        this._settings.set_double('latitude', city.latitude);
+        this._settings.set_double('longitude', city.longitude);
+        this._settings.set_boolean('manual-ready', true);
+        this._settings.set_boolean('use-auto-location', false);
+        this._settings.set_string('location-error', '');
+    }
+
+    _ensurePlaceName(location) {
+        if (!location || location.source !== 'auto' || !this._service || !this._settings)
+            return;
+        const key = placeKey(location);
+        if (this._namedKey === key)
+            return;
+        if (this._namedKey == null && location.name) {
+            this._namedKey = key;
+            return;
+        }
+        this._namedKey = key;
+        if (location.name) {
+            this._settings.set_string('auto-city-name', '');
+            this._settings.set_string('auto-country-name', '');
+            this._settings.set_string('auto-admin-name', '');
+        }
+        const token = ++this._placeToken;
+        const locale = GLib.get_language_names()?.[0] || 'en';
+        this._service.lookupPlace(location.latitude, location.longitude, locale)
+            .then(city => {
+                if (this._disposed || token !== this._placeToken || !this._settings)
+                    return;
+                this._settings.set_string('auto-city-name', city?.name || '');
+                this._settings.set_string('auto-country-name', city?.country || '');
+                this._settings.set_string('auto-admin-name', city?.admin || '');
+            })
+            .catch(() => {
+                if (this._namedKey === key)
+                    this._namedKey = '';
+            });
     }
 
     _place() {
@@ -141,34 +210,32 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
     _renderCached() {
         const state = readGSettings(this._settings);
         const location = locationFromState(state);
-        const settings = displayOptions(state);
         if (!location) {
             const denied = state.useAutoLocation && state.locationError === 'denied';
-            this._show(present({
+            this._show(this._present(state, {
                 status: denied ? 'unavailable' : 'unconfigured',
                 errorCode: denied ? 'denied' : null,
                 location: null,
                 report: null,
-                settings,
             }), null);
             return;
         }
+        this._ensurePlaceName(location);
         const peeked = this._service.peek(location, state);
         if (!peeked) {
-            this._show(present({
+            this._show(this._present(state, {
                 status: 'loading',
                 location,
                 report: null,
-                settings,
             }), null);
             return;
         }
-        this._show(present({
+        this._show(this._present(state, {
             status: peeked.fresh ? 'live' : 'stale',
             errorCode: peeked.fresh ? null : 'network',
             location,
             report: peeked.report,
-            settings,
+            providerId: peeked.providerId,
         }), new Date(peeked.updatedAtMs).toISOString());
     }
 
@@ -215,45 +282,43 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
             return;
         const token = ++this._refreshToken;
         const state = readGSettings(this._settings);
-        const settings = displayOptions(state);
         const location = locationFromState(state);
 
         if (!location) {
             const denied = state.useAutoLocation && state.locationError === 'denied';
-            this._show(present({
+            this._show(this._present(state, {
                 status: denied ? 'unavailable' : 'unconfigured',
                 errorCode: denied ? 'denied' : null,
                 location: null,
                 report: null,
-                settings,
             }), null);
             return;
         }
 
+        this._ensurePlaceName(location);
         const peeked = this._service.peek(location, state);
         if (peeked?.fresh && !force) {
-            this._show(present({
+            this._show(this._present(state, {
                 status: 'live',
                 location,
                 report: peeked.report,
-                settings,
+                providerId: peeked.providerId,
             }), new Date(peeked.updatedAtMs).toISOString());
             return;
         }
         if (peeked) {
-            this._show(present({
+            this._show(this._present(state, {
                 status: peeked.fresh ? 'live' : 'stale',
                 errorCode: peeked.fresh ? null : 'network',
                 location,
                 report: peeked.report,
-                settings,
+                providerId: peeked.providerId,
             }), new Date(peeked.updatedAtMs).toISOString());
         } else {
-            this._show(present({
+            this._show(this._present(state, {
                 status: 'loading',
                 location,
                 report: null,
-                settings,
             }), null);
         }
 
@@ -268,13 +333,14 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
             return;
 
         this._logger?.log?.(`Weather status: ${result.status}`);
-        const latest = displayOptions(readGSettings(this._settings));
-        this._show(present({
+        const latest = readGSettings(this._settings);
+        this._ensurePlaceName(result.location);
+        this._show(this._present(latest, {
             status: result.status,
             errorCode: result.errorCode,
             location: result.location,
             report: result.report,
-            settings: latest,
+            providerId: result.providerId,
         }), result.updatedAt);
     }
 

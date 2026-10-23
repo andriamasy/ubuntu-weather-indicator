@@ -53,9 +53,9 @@ gzip -9 -n -c "$ROOT/CHANGELOG.md" > "$DOC/changelog.gz"
 cat > "$DOC/changelog.Debian" <<EOF
 ${NAME} (${VERSION}) resolute; urgency=medium
 
-  * Indicateur météo GNOME Shell 50, placé à côté de l'horloge.
+  * Villes enregistrées, pression en hPa, pluie probable et secours MET Norway.
 
- -- mathieu <mathieu@localhost>  Thu, 22 Oct 2026 18:40:00 +0300
+ -- mathieu <mathieu@localhost>  Fri, 23 Oct 2026 08:10:00 +0300
 EOF
 gzip -9 -n -f "$DOC/changelog.Debian"
 

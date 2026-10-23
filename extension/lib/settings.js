@@ -6,7 +6,9 @@ import {
 
 const TEMPERATURE_UNITS = new Set(['celsius', 'fahrenheit']);
 const WIND_UNITS = new Set(['kmh', 'ms', 'mph', 'kn']);
+const PRESSURE_UNITS = new Set(['hpa', 'inhg']);
 const BAR_FORMATS = new Set(['icon-temp', 'temp', 'icon', 'icon-temp-city']);
+const MAX_SAVED_CITIES = 6;
 
 export function clampRefreshMinutes(value) {
     const number = Number(value);
@@ -56,17 +58,75 @@ export function locationFromState(state) {
     if (state?.useAutoLocation && state?.autoReady) {
         const coords = coordinatePair(state.autoLatitude, state.autoLongitude, 'auto');
         if (coords) {
+            const name = typeof state.autoCityName === 'string' ? state.autoCityName.trim() : '';
             return {
                 source: 'auto',
-                name: '',
-                country: '',
-                admin: '',
+                name,
+                country: typeof state.autoCountryName === 'string' ? state.autoCountryName.trim() : '',
+                admin: typeof state.autoAdminName === 'string' ? state.autoAdminName.trim() : '',
                 timezone: '',
                 ...coords,
             };
         }
     }
     return manualLocation(state);
+}
+
+function cityRecord(row) {
+    if (!row || typeof row !== 'object')
+        return null;
+    const name = typeof row.name === 'string' ? row.name.trim() : '';
+    if (!name)
+        return null;
+    const coords = coordinatePair(Number(row.latitude), Number(row.longitude), 'manual');
+    if (!coords)
+        return null;
+    return {
+        name,
+        country: typeof row.country === 'string' ? row.country.trim() : '',
+        admin: typeof row.admin === 'string' ? row.admin.trim() : '',
+        timezone: typeof row.timezone === 'string' ? row.timezone : '',
+        ...coords,
+    };
+}
+
+export function parseSavedCities(value) {
+    let rows;
+    try {
+        rows = JSON.parse(typeof value === 'string' ? value : '[]');
+    } catch {
+        return [];
+    }
+    if (!Array.isArray(rows))
+        return [];
+    const cities = [];
+    for (const row of rows) {
+        const city = cityRecord(row);
+        if (city)
+            cities.push(city);
+        if (cities.length >= MAX_SAVED_CITIES)
+            break;
+    }
+    return cities;
+}
+
+export function rememberCity(list, city) {
+    const record = cityRecord(city);
+    if (!record)
+        return Array.isArray(list) ? list.slice(0, MAX_SAVED_CITIES) : [];
+    const key = placeKey({...record, source: 'manual'});
+    const rest = (Array.isArray(list) ? list : []).filter(item => {
+        return placeKey({...item, source: 'manual'}) !== key;
+    });
+    return [record, ...rest].slice(0, MAX_SAVED_CITIES);
+}
+
+export function savedCitiesFromState(state) {
+    const stored = parseSavedCities(state?.savedCities);
+    const manual = manualLocation(state);
+    if (!manual)
+        return stored;
+    return rememberCity(stored, manual);
 }
 
 export function placeKey(location) {
@@ -81,10 +141,12 @@ export function displayOptions(state) {
     const windSpeedUnit = WIND_UNITS.has(state?.windSpeedUnit)
         ? state.windSpeedUnit
         : 'kmh';
+    const pressureUnit = PRESSURE_UNITS.has(state?.pressureUnit) ? state.pressureUnit : 'hpa';
     const barFormat = BAR_FORMATS.has(state?.barFormat) ? state.barFormat : 'icon-temp';
     return {
         temperatureUnit,
         windSpeedUnit,
+        pressureUnit,
         showIcon: state?.showIcon !== false,
         showTemperature: state?.showTemperature !== false,
         barFormat,

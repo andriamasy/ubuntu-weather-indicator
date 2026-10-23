@@ -1,7 +1,8 @@
 import {isValidReport} from './parse.js';
 
 export function evaluateCache(cache, key, providerId, nowMs, intervalMs) {
-    if (!cache || cache.placeKey !== key || cache.providerId !== providerId)
+    const accepted = Array.isArray(providerId) ? providerId : [providerId];
+    if (!cache || cache.placeKey !== key || !accepted.includes(cache.providerId))
         return {usable: false, fresh: false};
     if (!isValidReport(cache.report) || !Number.isFinite(cache.savedAtMs))
         return {usable: false, fresh: false};

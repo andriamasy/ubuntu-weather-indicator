@@ -8,7 +8,7 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 import {SoupJsonClient} from './client.js';
 import {EXTENSION_UUID} from './lib/constants.js';
 import {openMeteoProvider} from './lib/provider.js';
-import {clampRefreshMinutes} from './lib/settings.js';
+import {clampRefreshMinutes, rememberCity, savedCitiesFromState} from './lib/settings.js';
 
 export default class UbuntuWeatherPreferences extends ExtensionPreferences {
     async fillPreferencesWindow(window) {
@@ -18,8 +18,14 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
             warn: message => console.warn(`[ubuntu-weather-indicator] ${message}`),
         });
         this._resultRows = [];
+        this._savedRows = [];
         this._searchToken = 0;
+        this._searchDelay = 0;
         window.connect('close-request', () => {
+            if (this._searchDelay) {
+                GLib.source_remove(this._searchDelay);
+                this._searchDelay = 0;
+            }
             this._client?.destroy();
             this._client = null;
         });
@@ -46,19 +52,20 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
         current.add(this._currentRow);
         page.add(current);
 
+        this._savedGroup = new Adw.PreferencesGroup({title: _('Saved cities')});
+        page.add(this._savedGroup);
+        this._fillSaved(settings);
+
         const search = new Adw.PreferencesGroup({
             title: _('City'),
             description: _('Search uses the Open-Meteo geocoding service.'),
         });
         this._entry = new Adw.EntryRow({title: _('City name')});
-        this._entry.connect('entry-activated', () => {
-            this._search().catch(error => this._searchFailed(error));
-        });
+        this._entry.connect('notify::text', () => this._scheduleSearch());
+        this._entry.connect('entry-activated', () => this._searchNow());
         search.add(this._entry);
         const button = new Adw.ButtonRow({title: _('Search')});
-        button.connect('activated', () => {
-            this._search().catch(error => this._searchFailed(error));
-        });
+        button.connect('activated', () => this._searchNow());
         search.add(button);
         this._searchStatus = new Adw.ActionRow({title: _('Type at least 2 characters.')});
         search.add(this._searchStatus);
@@ -98,6 +105,10 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
             [_('Metres per second'), 'ms'],
             [_('Miles per hour'), 'mph'],
             [_('Knots'), 'kn'],
+        ]));
+        units.add(this._combo(settings, 'pressure-unit', _('Pressure unit'), [
+            [_('Hectopascals'), 'hpa'],
+            [_('Inches of mercury'), 'inhg'],
         ]));
         page.add(units);
 
@@ -173,6 +184,10 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
             title: 'Open-Meteo',
             subtitle: 'CC BY 4.0',
         }));
+        about.add(new Adw.ActionRow({
+            title: 'MET Norway',
+            subtitle: _('Fallback forecast, no API key'),
+        }));
         page.add(about);
         settings.set_boolean('autostart', this._extensionEnabled());
         return page;
@@ -203,6 +218,26 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
         const city = settings.get_string('city-name');
         const country = settings.get_string('country-name');
         return country ? `${city}, ${country}` : city;
+    }
+
+    _scheduleSearch() {
+        if (this._searchDelay) {
+            GLib.source_remove(this._searchDelay);
+            this._searchDelay = 0;
+        }
+        this._searchDelay = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+            this._searchDelay = 0;
+            this._search().catch(error => this._searchFailed(error));
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _searchNow() {
+        if (this._searchDelay) {
+            GLib.source_remove(this._searchDelay);
+            this._searchDelay = 0;
+        }
+        this._search().catch(error => this._searchFailed(error));
     }
 
     async _search() {
@@ -251,8 +286,49 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
             : _('Search failed.');
     }
 
+    _fillSaved(settings) {
+        for (const row of this._savedRows)
+            this._savedGroup.remove(row);
+        this._savedRows = [];
+        const state = {
+            savedCities: settings.get_string('saved-cities'),
+            manualReady: settings.get_boolean('manual-ready'),
+            cityName: settings.get_string('city-name'),
+            countryName: settings.get_string('country-name'),
+            adminName: settings.get_string('admin-name'),
+            latitude: settings.get_double('latitude'),
+            longitude: settings.get_double('longitude'),
+            timezone: settings.get_string('timezone'),
+        };
+        const cities = savedCitiesFromState(state);
+        this._savedGroup.visible = cities.length > 0;
+        for (const city of cities) {
+            const subtitle = [city.admin, city.country].filter(Boolean).join(', ');
+            const row = new Adw.ActionRow({
+                title: city.name,
+                subtitle,
+                activatable: true,
+            });
+            row.connect('activated', () => this._selectCity(city));
+            this._savedRows.push(row);
+            this._savedGroup.add(row);
+        }
+    }
+
     _selectCity(city) {
         const settings = this._settings;
+        const state = {
+            savedCities: settings.get_string('saved-cities'),
+            manualReady: settings.get_boolean('manual-ready'),
+            cityName: settings.get_string('city-name'),
+            countryName: settings.get_string('country-name'),
+            adminName: settings.get_string('admin-name'),
+            latitude: settings.get_double('latitude'),
+            longitude: settings.get_double('longitude'),
+            timezone: settings.get_string('timezone'),
+        };
+        const list = rememberCity(savedCitiesFromState(state), city);
+        settings.set_string('saved-cities', JSON.stringify(list));
         settings.set_string('city-name', city.name);
         settings.set_string('country-name', city.country);
         settings.set_string('admin-name', city.admin || '');
@@ -265,6 +341,7 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
         this._currentRow.title = city.country ? `${city.name}, ${city.country}` : city.name;
         this._currentRow.subtitle = _('Manual city');
         this._searchStatus.title = _('Saved city');
+        this._fillSaved(settings);
     }
 
     _clearResults() {

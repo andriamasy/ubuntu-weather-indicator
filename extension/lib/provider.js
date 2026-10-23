@@ -1,4 +1,5 @@
 import {FORECAST_ENDPOINT, GEOCODING_ENDPOINT, PROVIDER_ID} from './constants.js';
+import {metForecastUrl, parseMetForecast} from './met.js';
 import {parseForecast, parseGeocoding} from './parse.js';
 import {languageCode} from './settings.js';
 
@@ -65,12 +66,34 @@ export const openMeteoProvider = {
     parseGeocoding,
 };
 
+export const metNorwayProvider = {
+    id: 'met-no',
+    label: 'MET Norway',
+    forecastUrl: metForecastUrl,
+    geocodingUrl() {
+        throw new Error('met-no has no geocoding');
+    },
+    parseForecast: parseMetForecast,
+    parseGeocoding() {
+        return [];
+    },
+};
+
 const PROVIDERS = {
     [PROVIDER_ID]: openMeteoProvider,
+    'met-no': metNorwayProvider,
 };
 
 export function getProvider(id) {
     return PROVIDERS[id] || null;
+}
+
+export function getFallbacks(id) {
+    if (id === PROVIDER_ID)
+        return [metNorwayProvider];
+    if (id === 'met-no')
+        return [openMeteoProvider];
+    return [];
 }
 
 export function listProviders() {

@@ -15,6 +15,6 @@
     <p xml:lang="fr">Indicateur natif GNOME Shell pour Ubuntu 26.04. Il affiche la température à côté de l'horloge et des prévisions Open-Meteo.</p>
   </description>
   <launchable type="desktop-id">ubuntu-weather-indicator.desktop</launchable>
-  <url type="homepage">https://open-meteo.com/</url>
+  <url type="homepage">https://github.com/andriamasy/ubuntu-weather-indicator</url>
   <content_rating type="oars-1.1"/>
 </component>
