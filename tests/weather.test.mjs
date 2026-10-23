@@ -14,6 +14,9 @@ import {forecastUrl, geocodingUrl, getFallbacks, getProvider} from '../extension
 import {WeatherError, refreshWeather} from '../extension/lib/refresh.js';
 import {
     clampAlertHours,
+    clampAlertMinutes,
+    clampAlertRainPercent,
+    clampAlertWindKmh,
     clampRefreshMinutes,
     displayOptions,
     locationFromState,
@@ -22,7 +25,7 @@ import {
     rememberCity,
     roundCoordinate,
 } from '../extension/lib/settings.js';
-import {forecastHourKey, hourLabel, weekdayIndex} from '../extension/lib/time.js';
+import {civilHourToDate, forecastHourKey, hourLabel, weekdayIndex} from '../extension/lib/time.js';
 import {
     compass,
     formatPressure,
@@ -138,10 +141,17 @@ test('refresh interval and coordinates stay bounded', () => {
     assert.equal(clampRefreshMinutes(1), 10);
     assert.equal(clampRefreshMinutes(1000), 180);
     assert.equal(clampRefreshMinutes('nope'), 30);
-    assert.equal(clampAlertHours(0), 1);
+    assert.equal(clampAlertHours(0), 0);
     assert.equal(clampAlertHours(2.4), 2);
     assert.equal(clampAlertHours(40), 12);
     assert.equal(clampAlertHours('nope'), 1);
+    assert.equal(clampAlertMinutes(0), 0);
+    assert.equal(clampAlertMinutes(90), 59);
+    assert.equal(clampAlertMinutes('nope'), 0);
+    assert.equal(clampAlertRainPercent(1), 10);
+    assert.equal(clampAlertRainPercent(95), 90);
+    assert.equal(clampAlertWindKmh(10), 60);
+    assert.equal(clampAlertWindKmh(400), 200);
     assert.equal(roundCoordinate(48.85661, 'auto'), 48.86);
     assert.equal(roundCoordinate(2.35222, 'manual'), 2.3522);
     assert.equal(roundCoordinate(Number.NaN, 'manual'), null);
@@ -576,4 +586,35 @@ test('rain and cyclone are announced for the next hour only', () => {
     const wider = alertsAhead(report, new Date('2026-10-23T09:40:00Z'), 6);
     assert.equal(wider.rain.time, twoHours.rain.time);
     assert.equal(alertsAhead(report, new Date('2026-10-23T11:20:00Z'), 6).rain, null);
+
+    const likely = {
+        timezone: 'UTC',
+        hourly: [
+            {time: '2026-10-23T10:00', weatherCode: 1, precipitationProbability: 10, windKmh: 40},
+            {time: '2026-10-23T11:00', weatherCode: 2, precipitationProbability: 55, windKmh: 90},
+        ],
+    };
+    const when = new Date('2026-10-23T10:10:00Z');
+    assert.equal(alertsAhead(likely, when, {leadHours: 1, rainPercent: 60}).rain, null);
+    assert.equal(alertsAhead(likely, when, {leadHours: 1, rainPercent: 50}).rain.label, '11:00');
+    assert.equal(alertsAhead(likely, when, {leadHours: 1, windKmh: 100}).cyclone, null);
+    assert.equal(alertsAhead(likely, when, {leadHours: 1, windKmh: 80}).cyclone.windKmh, 90);
+    assert.equal(alertsAhead(likely, when, {leadHours: 1, rainEnabled: false}).rain, null);
+    assert.equal(alertsAhead(likely, when, {leadHours: 1, cycloneEnabled: false, windKmh: 80}).cyclone, null);
+
+    assert.equal(civilHourToDate('2026-10-23T14', 'Europe/Paris').toISOString(), '2026-10-23T12:00:00.000Z');
+    const halfHour = {
+        timezone: 'Europe/Paris',
+        hourly: [
+            {time: '2026-10-23T13:00', weatherCode: 0, precipitationProbability: 0, windKmh: 10},
+            {time: '2026-10-23T14:00', weatherCode: 61, precipitationProbability: 70, windKmh: 20},
+        ],
+    };
+    const earlyMinute = alertsAhead(halfHour, new Date('2026-10-23T11:00:00Z'), {leadHours: 0, minutes: 30});
+    assert.equal(earlyMinute.rain, null);
+    assert.ok(earlyMinute.waitMinutes > 29 && earlyMinute.waitMinutes < 31);
+    const combined = alertsAhead(halfHour, new Date('2026-10-23T11:00:00Z'), {leadHours: 1, minutes: 30});
+    assert.equal(combined.rain.label, '14:00');
+    const dueMinute = alertsAhead(halfHour, new Date('2026-10-23T11:40:00Z'), {leadHours: 0, minutes: 30});
+    assert.equal(dueMinute.rain.label, '14:00');
 });

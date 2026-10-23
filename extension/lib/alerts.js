@@ -1,11 +1,9 @@
-import {clampAlertHours} from './settings.js';
-import {forecastHourKey, hourKey, hourLabel} from './time.js';
+import {clampAlertHours, clampAlertMinutes, clampAlertRainPercent, clampAlertWindKmh} from './settings.js';
+import {civilHourToDate, forecastHourKey, hourKey, hourLabel} from './time.js';
 
 const RAIN_CODES = new Set([
     51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99,
 ]);
-const RAIN_PROBABILITY = 40;
-const CYCLONE_WIND_KMH = 118;
 
 function zoneOf(report) {
     if (typeof report?.timezone === 'string' && report.timezone.trim())
@@ -38,20 +36,40 @@ function hourAt(hourly, key) {
     return hourly.find(item => hourKey(item?.time) === key) || null;
 }
 
-export function isRainHour(hour) {
+export function isRainHour(hour, rainPercent) {
     if (!hour)
         return false;
     if (RAIN_CODES.has(hour.weatherCode))
         return true;
+    const minimum = clampAlertRainPercent(rainPercent);
     return typeof hour.precipitationProbability === 'number'
-        && hour.precipitationProbability >= RAIN_PROBABILITY;
+        && hour.precipitationProbability >= minimum;
 }
 
-export function isCycloneHour(hour) {
-    return typeof hour?.windKmh === 'number' && hour.windKmh >= CYCLONE_WIND_KMH;
+export function isCycloneHour(hour, windKmh) {
+    const minimum = clampAlertWindKmh(windKmh);
+    return typeof hour?.windKmh === 'number' && hour.windKmh >= minimum;
 }
 
-function describe(hour) {
+function alertOptions(value) {
+    const options = value && typeof value === 'object' ? value : {leadHours: value};
+    return {
+        leadHours: options.leadHours,
+        minutes: options.minutes,
+        rainEnabled: options.rainEnabled !== false,
+        cycloneEnabled: options.cycloneEnabled !== false,
+        rainPercent: options.rainPercent,
+        windKmh: options.windKmh,
+    };
+}
+
+export function leadMinutes(options) {
+    const parsed = alertOptions(options);
+    const total = clampAlertHours(parsed.leadHours) * 60 + clampAlertMinutes(parsed.minutes);
+    return total > 0 ? total : 1;
+}
+
+function describe(hour, minutesUntil) {
     return {
         time: hour.time,
         label: hourLabel(hour.time),
@@ -59,37 +77,79 @@ function describe(hour) {
             ? hour.precipitationProbability
             : null,
         windKmh: typeof hour.windKmh === 'number' ? hour.windKmh : null,
+        minutesUntil,
     };
 }
 
+function minutesUntilHour(key, now, timeZone) {
+    const onset = civilHourToDate(key, timeZone);
+    if (!onset || !(now instanceof Date) || Number.isNaN(now.getTime()))
+        return null;
+    return (onset.getTime() - now.getTime()) / 60000;
+}
+
+function dueAlert(item, lead) {
+    return item && item.minutesUntil > 0 && item.minutesUntil <= lead ? item : null;
+}
+
+function waitMinutes(item, lead) {
+    if (!item || item.minutesUntil <= lead)
+        return null;
+    return item.minutesUntil - lead;
+}
+
 export function alertsAhead(report, now, leadHours = 1) {
-    const empty = {rain: null, cyclone: null};
+    const empty = {rain: null, cyclone: null, waitMinutes: null};
+    const options = alertOptions(leadHours);
+    if (!options.rainEnabled && !options.cycloneEnabled)
+        return empty;
     const hourly = report?.hourly;
-    const lead = clampAlertHours(leadHours);
-    let key = forecastHourKey(now, zoneOf(report));
+    const lead = leadMinutes(options);
+    const rainPercent = clampAlertRainPercent(options.rainPercent);
+    const windMinimum = clampAlertWindKmh(options.windKmh);
+    const zone = zoneOf(report);
+    let key = forecastHourKey(now, zone);
     if (!key)
         return empty;
-    let rainBlocked = isRainHour(hourAt(hourly, key));
-    let cycloneBlocked = isCycloneHour(hourAt(hourly, key));
+    const current = hourAt(hourly, key);
+    let rainBlocked = options.rainEnabled && isRainHour(current, rainPercent);
+    let cycloneBlocked = options.cycloneEnabled && isCycloneHour(current, windMinimum);
     let rain = null;
     let cyclone = null;
-    for (let step = 1; step <= lead; step += 1) {
+    for (let step = 1; step <= 36; step += 1) {
         key = nextHourKey(key);
         const hour = hourAt(hourly, key);
         if (!key || !hour)
             break;
-        if (!rainBlocked && isRainHour(hour))
-            rain = describe(hour);
-        if (isRainHour(hour))
-            rainBlocked = true;
-        if (!cycloneBlocked && isCycloneHour(hour))
-            cyclone = describe(hour);
-        if (isCycloneHour(hour))
-            cycloneBlocked = true;
-        if (rainBlocked && cycloneBlocked)
+        const until = minutesUntilHour(key, now, zone);
+        if (until == null)
+            break;
+        const rainy = options.rainEnabled && isRainHour(hour, rainPercent);
+        const cyclonic = options.cycloneEnabled && isCycloneHour(hour, windMinimum);
+        if (until <= 0) {
+            if (rainy)
+                rainBlocked = true;
+            if (cyclonic)
+                cycloneBlocked = true;
+        } else {
+            if (!rainBlocked && rainy)
+                rain = describe(hour, until);
+            if (rainy)
+                rainBlocked = true;
+            if (!cycloneBlocked && cyclonic)
+                cyclone = describe(hour, until);
+            if (cyclonic)
+                cycloneBlocked = true;
+        }
+        if ((!options.rainEnabled || rainBlocked) && (!options.cycloneEnabled || cycloneBlocked))
             break;
     }
-    return {rain, cyclone};
+    const waits = [waitMinutes(rain, lead), waitMinutes(cyclone, lead)].filter(value => value != null);
+    return {
+        rain: dueAlert(rain, lead),
+        cyclone: dueAlert(cyclone, lead),
+        waitMinutes: waits.length ? Math.min(...waits) : null,
+    };
 }
 
 export function alertsOneHourAhead(report, now) {

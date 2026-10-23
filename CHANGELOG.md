@@ -1,3 +1,15 @@
+# ubuntu-weather-indicator 1.2.8
+
+- Le préavis additionne les heures et les minutes saisies ensemble.
+
+# ubuntu-weather-indicator 1.2.7
+
+- Le préavis des alertes se règle en heures ou en minutes.
+
+# ubuntu-weather-indicator 1.2.6
+
+- Les alertes de pluie et de cyclone se règlent séparément, avec un seuil de probabilité et un seuil de vent.
+
 # ubuntu-weather-indicator 1.2.5
 
 - Le préavis des notifications se règle de 1 à 12 heures.

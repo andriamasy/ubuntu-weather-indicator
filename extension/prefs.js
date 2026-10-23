@@ -8,7 +8,7 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 import {SoupJsonClient} from './client.js';
 import {EXTENSION_UUID} from './lib/constants.js';
 import {openMeteoProvider} from './lib/provider.js';
-import {clampAlertHours, clampRefreshMinutes, forgetCity, placeKey, rememberCity, savedCitiesFromState} from './lib/settings.js';
+import {clampAlertHours, clampAlertMinutes, clampAlertRainPercent, clampAlertWindKmh, clampRefreshMinutes, forgetCity, placeKey, rememberCity, savedCitiesFromState} from './lib/settings.js';
 
 export default class UbuntuWeatherPreferences extends ExtensionPreferences {
     async fillPreferencesWindow(window) {
@@ -176,12 +176,61 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
         refresh.add(spin);
         page.add(refresh);
 
-        const notices = new Adw.PreferencesGroup({title: _('Notifications')});
-        const notice = new Adw.SpinRow({
-            title: _('Notice before rain or cyclone'),
-            subtitle: _('Hours in advance, from 1 to 12.'),
+        const notices = new Adw.PreferencesGroup({
+            title: _('Notifications'),
+            description: _('Choose which alerts to receive, and how sensitive they are.'),
+        });
+        const rainSwitch = new Adw.SwitchRow({
+            title: _('Warn about rain'),
+            active: settings.get_boolean('alert-rain-enabled'),
+        });
+        rainSwitch.connect('notify::active', () => {
+            settings.set_boolean('alert-rain-enabled', rainSwitch.active);
+        });
+        notices.add(rainSwitch);
+        const rainPercent = new Adw.SpinRow({
+            title: _('Minimum rain probability'),
+            subtitle: _('From 10 to 90 percent. A rain code always counts.'),
             adjustment: new Gtk.Adjustment({
-                lower: 1,
+                lower: 10,
+                upper: 90,
+                step_increment: 5,
+                page_increment: 10,
+                value: settings.get_int('alert-rain-percent'),
+            }),
+        });
+        rainPercent.connect('notify::value', () => {
+            settings.set_int('alert-rain-percent', clampAlertRainPercent(rainPercent.value));
+        });
+        notices.add(rainPercent);
+        const cycloneSwitch = new Adw.SwitchRow({
+            title: _('Warn about cyclone wind'),
+            active: settings.get_boolean('alert-cyclone-enabled'),
+        });
+        cycloneSwitch.connect('notify::active', () => {
+            settings.set_boolean('alert-cyclone-enabled', cycloneSwitch.active);
+        });
+        notices.add(cycloneSwitch);
+        const wind = new Adw.SpinRow({
+            title: _('Minimum cyclone wind'),
+            subtitle: _('Kilometres per hour, from 60 to 200.'),
+            adjustment: new Gtk.Adjustment({
+                lower: 60,
+                upper: 200,
+                step_increment: 5,
+                page_increment: 10,
+                value: settings.get_int('alert-wind-kmh'),
+            }),
+        });
+        wind.connect('notify::value', () => {
+            settings.set_int('alert-wind-kmh', clampAlertWindKmh(wind.value));
+        });
+        notices.add(wind);
+        const notice = new Adw.SpinRow({
+            title: _('Hours in advance'),
+            subtitle: _('From 0 to 12. Added to the minutes.'),
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
                 upper: 12,
                 step_increment: 1,
                 page_increment: 1,
@@ -192,6 +241,21 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
             settings.set_int('alert-hours', clampAlertHours(notice.value));
         });
         notices.add(notice);
+        const minuteNotice = new Adw.SpinRow({
+            title: _('Minutes in advance'),
+            subtitle: _('From 0 to 59. Added to the hours.'),
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 59,
+                step_increment: 1,
+                page_increment: 10,
+                value: settings.get_int('alert-minutes'),
+            }),
+        });
+        minuteNotice.connect('notify::value', () => {
+            settings.set_int('alert-minutes', clampAlertMinutes(minuteNotice.value));
+        });
+        notices.add(minuteNotice);
         page.add(notices);
         return page;
     }

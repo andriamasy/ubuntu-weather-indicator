@@ -1,9 +1,18 @@
 import {
     DEFAULT_ALERT_HOURS,
+    DEFAULT_ALERT_MINUTES,
+    DEFAULT_ALERT_RAIN_PERCENT,
+    DEFAULT_ALERT_WIND_KMH,
     DEFAULT_REFRESH_MINUTES,
     MAX_ALERT_HOURS,
+    MAX_ALERT_MINUTES,
+    MAX_ALERT_RAIN_PERCENT,
+    MAX_ALERT_WIND_KMH,
     MAX_REFRESH_MINUTES,
     MIN_ALERT_HOURS,
+    MIN_ALERT_MINUTES,
+    MIN_ALERT_RAIN_PERCENT,
+    MIN_ALERT_WIND_KMH,
     MIN_REFRESH_MINUTES,
 } from './constants.js';
 
@@ -25,6 +34,27 @@ export function clampAlertHours(value) {
     if (!Number.isFinite(number))
         return DEFAULT_ALERT_HOURS;
     return Math.min(MAX_ALERT_HOURS, Math.max(MIN_ALERT_HOURS, Math.round(number)));
+}
+
+export function clampAlertMinutes(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number))
+        return DEFAULT_ALERT_MINUTES;
+    return Math.min(MAX_ALERT_MINUTES, Math.max(MIN_ALERT_MINUTES, Math.round(number)));
+}
+
+export function clampAlertRainPercent(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number))
+        return DEFAULT_ALERT_RAIN_PERCENT;
+    return Math.min(MAX_ALERT_RAIN_PERCENT, Math.max(MIN_ALERT_RAIN_PERCENT, Math.round(number)));
+}
+
+export function clampAlertWindKmh(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number))
+        return DEFAULT_ALERT_WIND_KMH;
+    return Math.min(MAX_ALERT_WIND_KMH, Math.max(MIN_ALERT_WIND_KMH, Math.round(number)));
 }
 
 export function roundCoordinate(value, source) {

@@ -97,8 +97,31 @@
     </key>
     <key name="alert-hours" type="i">
       <default>1</default>
-      <range min="1" max="12"/>
+      <range min="0" max="12"/>
       <summary>Hours of notice before rain or cyclone wind</summary>
+    </key>
+    <key name="alert-minutes" type="i">
+      <default>0</default>
+      <range min="0" max="59"/>
+      <summary>Extra minutes of notice, added to the hours</summary>
+    </key>
+    <key name="alert-rain-enabled" type="b">
+      <default>true</default>
+      <summary>Notify before rain</summary>
+    </key>
+    <key name="alert-cyclone-enabled" type="b">
+      <default>true</default>
+      <summary>Notify before cyclone wind</summary>
+    </key>
+    <key name="alert-rain-percent" type="i">
+      <default>40</default>
+      <range min="10" max="90"/>
+      <summary>Minimum precipitation probability for a rain alert</summary>
+    </key>
+    <key name="alert-wind-kmh" type="i">
+      <default>118</default>
+      <range min="60" max="200"/>
+      <summary>Minimum wind speed in km/h for a cyclone alert</summary>
     </key>
     <key name="show-icon" type="b">
       <default>true</default>

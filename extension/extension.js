@@ -11,6 +11,9 @@ import {alertsAhead} from './lib/alerts.js';
 import {present} from './lib/present.js';
 import {
     clampAlertHours,
+    clampAlertMinutes,
+    clampAlertRainPercent,
+    clampAlertWindKmh,
     clampRefreshMinutes,
     displayOptions,
     locationFromState,
@@ -41,6 +44,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         this._refreshToken = 0;
         this._timer = 0;
         this._hourTimer = 0;
+        this._noticeTimer = 0;
         this._debounce = 0;
         this._settingsId = 0;
         this._themeId = 0;
@@ -107,6 +111,7 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         this._refreshToken++;
         this._clearTimer();
         this._clearHour();
+        this._clearNotice();
         this._clearDebounce();
         if (this._network && this._networkId) {
             this._network.disconnect(this._networkId);
@@ -293,6 +298,46 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         }
     }
 
+    _clearNotice() {
+        if (this._noticeTimer) {
+            GLib.source_remove(this._noticeTimer);
+            this._noticeTimer = 0;
+        }
+    }
+
+    _armNotice(waitMinutes) {
+        this._clearNotice();
+        if (this._disposed || !Number.isFinite(waitMinutes) || waitMinutes <= 0)
+            return;
+        const seconds = Math.max(1, Math.ceil(waitMinutes * 60));
+        this._noticeTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
+            this._noticeTimer = 0;
+            if (!this._disposed)
+                this._renderCached();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _alertOptions() {
+        const settings = this._settings;
+        const read = (fn, fallback) => {
+            try {
+                const value = fn();
+                return value == null ? fallback : value;
+            } catch {
+                return fallback;
+            }
+        };
+        return {
+            minutes: clampAlertMinutes(read(() => settings?.get_int('alert-minutes'), 0)),
+            leadHours: clampAlertHours(read(() => settings?.get_int('alert-hours'), 1)),
+            rainEnabled: read(() => settings?.get_boolean('alert-rain-enabled'), true) !== false,
+            cycloneEnabled: read(() => settings?.get_boolean('alert-cyclone-enabled'), true) !== false,
+            rainPercent: clampAlertRainPercent(read(() => settings?.get_int('alert-rain-percent'), 40)),
+            windKmh: clampAlertWindKmh(read(() => settings?.get_int('alert-wind-kmh'), 118)),
+        };
+    }
+
     _armHour(timeZone) {
         this._clearHour();
         if (this._disposed)
@@ -409,8 +454,8 @@ export default class UbuntuWeatherIndicatorExtension extends Extension {
         } catch {
             return;
         }
-        const lead = clampAlertHours(this._settings?.get_int('alert-hours'));
-        const alerts = alertsAhead(report, new Date(), lead);
+        const alerts = alertsAhead(report, new Date(), this._alertOptions());
+        this._armNotice(alerts.waitMinutes);
         if (alerts.rain)
             this._notifyOnce(`rain:${place}:${alerts.rain.time}`, _('Rain soon'), this._rainBody(alerts.rain));
         if (alerts.cyclone)

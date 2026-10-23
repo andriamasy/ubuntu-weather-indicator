@@ -21,7 +21,7 @@ GNOME Shell 50 a retiré X11. Le paquet interrompt son installation si la détec
 ./scripts/test.sh
 ./scripts/package-deb.sh
 ./scripts/validate-deb.sh
-sudo apt install ./dist/ubuntu-weather-indicator_1.2.5_all.deb
+sudo apt install ./dist/ubuntu-weather-indicator_1.2.8_all.deb
 ```
 
 Fermez ensuite la session et rouvrez-la. GNOME Shell 50 ne détecte une extension ajoutée qu’au démarrage : l’indicateur n’apparaît pas dans une barre déjà ouverte. Puis, sans sudo :

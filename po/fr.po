@@ -197,11 +197,56 @@ msgstr "Intervalle d’actualisation"
 msgid "Notifications"
 msgstr "Notifications"
 
+msgid "Choose which alerts to receive, and how sensitive they are."
+msgstr "Choisissez les alertes à recevoir, et leur sensibilité."
+
+msgid "Warn about rain"
+msgstr "Avertir de la pluie"
+
+msgid "Minimum rain probability"
+msgstr "Probabilité minimale de pluie"
+
+msgid "From 10 to 90 percent. A rain code always counts."
+msgstr "De 10 à 90 %. Un code de pluie compte toujours."
+
+msgid "Warn about cyclone wind"
+msgstr "Avertir d’un vent de cyclone"
+
+msgid "Minimum cyclone wind"
+msgstr "Vent minimal de cyclone"
+
+msgid "Kilometres per hour, from 60 to 200."
+msgstr "Kilomètres par heure, de 60 à 200."
+
 msgid "Notice before rain or cyclone"
 msgstr "Préavis avant la pluie ou un cyclone"
 
 msgid "Hours in advance, from 1 to 12."
 msgstr "Heures d’avance, de 1 à 12."
+
+msgid "Hours in advance"
+msgstr "Heures d’avance"
+
+msgid "From 0 to 12. Added to the minutes."
+msgstr "De 0 à 12. Ajoutées aux minutes."
+
+msgid "Minutes in advance"
+msgstr "Minutes d’avance"
+
+msgid "From 0 to 59. Added to the hours."
+msgstr "De 0 à 59. Ajoutées aux heures."
+
+msgid "Notice unit"
+msgstr "Unité du préavis"
+
+msgid "Hours"
+msgstr "Heures"
+
+msgid "Minutes"
+msgstr "Minutes"
+
+msgid "Minutes in advance, from 5 to 720."
+msgstr "Minutes d’avance, de 5 à 720."
 
 msgid "Results"
 msgstr "Résultats"
