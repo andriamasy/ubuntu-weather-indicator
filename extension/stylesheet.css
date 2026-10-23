@@ -15,7 +15,7 @@
 }
 
 .weather-popup {
-    min-width: 560px;
+    width: 700px;
 }
 
 .weather-menu-item {
@@ -28,95 +28,289 @@
 }
 
 .weather-menu-root {
-    padding: 14px 18px 12px;
-    spacing: 12px;
+    padding: 14px 16px 10px;
+    spacing: 14px;
 }
 
-.weather-top {
-    spacing: 16px;
-}
-
+.weather-header,
+.weather-titles,
+.weather-condition-lines,
 .weather-summary {
-    spacing: 4px;
+    spacing: 2px;
+}
+
+.weather-header {
+    spacing: 8px;
+}
+
+.weather-pin {
+    margin-top: 2px;
+    color: rgb(47, 128, 204);
 }
 
 .weather-place {
-    font-size: 0.95em;
+    font-size: 1.05em;
+    font-weight: bold;
+}
+
+.weather-place-credit,
+.weather-attribution,
+.weather-forecast-link-label {
+    font-size: 0.82em;
+    color: alpha(currentColor, 0.58);
+}
+
+.weather-local {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid alpha(currentColor, 0.14);
+    background-color: alpha(currentColor, 0.03);
+}
+
+.weather-local:hover {
+    background-color: alpha(currentColor, 0.08);
+}
+
+.weather-local-row,
+.weather-rain-row,
+.weather-forecast-heading,
+.weather-forecast-link-row,
+.weather-credit {
+    spacing: 6px;
+}
+
+.weather-local-icon,
+.weather-local-label {
+    color: alpha(currentColor, 0.72);
+}
+
+.weather-local-label {
+    font-size: 0.85em;
+}
+
+.weather-hero {
+    spacing: 16px;
+}
+
+.weather-condition {
+    spacing: 12px;
 }
 
 .weather-headline {
-    font-size: 1.55em;
+    font-size: 1.75em;
     font-weight: bold;
+}
+
+.weather-tone-sun {
+    color: rgb(242, 176, 42);
+}
+
+.weather-tone-cloud {
+    color: rgb(120, 144, 168);
+}
+
+.weather-tone-rain {
+    color: rgb(79, 141, 196);
+}
+
+.weather-tone-snow {
+    color: rgb(120, 168, 204);
+}
+
+.weather-tone-storm {
+    color: rgb(96, 112, 148);
+}
+
+.weather-tone-night {
+    color: rgb(110, 124, 176);
+}
+
+.weather-meta-icon {
+    color: rgb(96, 140, 176);
 }
 
 .weather-sun,
 .weather-clock,
-.weather-day-temps,
-.weather-day-body,
 .weather-footer {
     spacing: 8px;
 }
 
-.weather-clock-label,
-.weather-day-date,
-.weather-stat {
-    font-size: 0.95em;
+.weather-times {
+    spacing: 0;
+    margin-top: 6px;
+}
+
+.weather-clock-label {
+    font-size: 0.9em;
+    color: alpha(currentColor, 0.62);
+}
+
+.weather-time-sep {
+    width: 1px;
+    height: 14px;
+    margin: 0 10px;
+    background-color: alpha(currentColor, 0.2);
 }
 
 .weather-stats {
-    spacing: 2px;
+    min-width: 220px;
+    spacing: 8px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    border: 1px solid alpha(currentColor, 0.1);
+    background-color: alpha(currentColor, 0.025);
+}
+
+.weather-stat-row {
+    spacing: 8px;
+}
+
+.weather-stat-name {
+    color: alpha(currentColor, 0.68);
+}
+
+.weather-stat-value {
+    font-weight: bold;
+}
+
+.weather-separator,
+.weather-section {
+    color: inherit;
+}
+
+.weather-section {
+    font-weight: bold;
+    font-size: 0.9em;
 }
 
 .weather-separator {
     height: 1px;
-    background-color: rgba(255, 255, 255, 0.16);
+    background-color: alpha(currentColor, 0.18);
 }
 
-.weather-forecast {
-    spacing: 28px;
+.weather-panel {
+    spacing: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid alpha(currentColor, 0.1);
+    background-color: alpha(currentColor, 0.025);
 }
 
-.weather-day {
-    spacing: 2px;
+.weather-forecast-bar {
+    spacing: 8px;
 }
 
-.weather-day-title {
+.weather-forecast-badge {
+    padding: 3px;
+    border-radius: 999px;
+    border: 1px solid alpha(currentColor, 0.22);
+}
+
+.weather-forecast-title {
+    font-weight: bold;
+    font-size: 1.02em;
+}
+
+.weather-forecast-link {
+    padding: 2px 4px;
+    border-radius: 8px;
+}
+
+.weather-forecast-link:hover {
+    background-color: alpha(currentColor, 0.06);
+}
+
+.weather-forecast-link-icon {
+    color: alpha(currentColor, 0.5);
+}
+
+.weather-forecast,
+.weather-hourly {
+    spacing: 8px;
+}
+
+.weather-slot {
+    spacing: 4px;
+    padding: 8px 4px;
+    border-radius: 14px;
+    border: 1px solid alpha(currentColor, 0.1);
+}
+
+.weather-slot-now {
+    background-color: alpha(rgb(59, 130, 196), 0.14);
+    border: 1px solid alpha(rgb(59, 130, 196), 0.45);
+}
+
+.weather-day-title,
+.weather-hour-temp,
+.weather-day-temp {
     font-weight: bold;
 }
 
 .weather-footer {
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
-.weather-attribution {
-    font-size: 0.9em;
-    text-align: center;
+.weather-footer-side {
+    min-width: 72px;
+    spacing: 2px;
 }
 
 .weather-tool {
-    width: 36px;
-    height: 36px;
-    border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.45);
-    padding: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    padding: 4px;
 }
 
-.weather-tool:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+.weather-tool:hover,
+.weather-city:hover,
+.weather-search-hit:hover {
+    background-color: alpha(currentColor, 0.08);
 }
 
 .weather-cities {
     spacing: 8px;
 }
 
-.weather-city {
+.weather-city,
+.weather-search-hit {
     padding: 4px 10px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    border: 1px solid alpha(currentColor, 0.35);
 }
 
 .weather-city-active {
     font-weight: bold;
+    background-color: alpha(currentColor, 0.12);
+}
+
+.weather-hour-label,
+.weather-day-min {
+    font-size: 0.82em;
+    color: alpha(currentColor, 0.62);
+}
+
+.weather-slot-now .weather-hour-label,
+.weather-slot-now .weather-day-title {
+    color: rgb(47, 111, 173);
+    font-weight: bold;
+}
+
+.weather-hour-temp,
+.weather-day-temp {
+    font-size: 0.95em;
+}
+
+.weather-day-min {
+    opacity: 0.75;
+}
+
+.weather-search-box,
+.weather-search-results,
+.weather-hours-block,
+.weather-days-block {
+    spacing: 6px;
 }
 
 .weather-city-caption {
@@ -124,9 +318,20 @@
 }
 
 .weather-rain {
-    font-weight: bold;
+    color: alpha(currentColor, 0.78);
 }
 
-.weather-place-credit {
-    font-size: 0.85em;
+.weather-credit-link {
+    color: rgb(37, 111, 184);
+    font-size: 0.82em;
+    padding: 0;
+}
+
+.weather-clock {
+    spacing: 4px;
+}
+
+.weather-clock-icon,
+.weather-forecast-badge-icon {
+    color: alpha(currentColor, 0.55);
 }

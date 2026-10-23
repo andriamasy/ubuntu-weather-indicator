@@ -8,7 +8,7 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 import {SoupJsonClient} from './client.js';
 import {EXTENSION_UUID} from './lib/constants.js';
 import {openMeteoProvider} from './lib/provider.js';
-import {clampRefreshMinutes, rememberCity, savedCitiesFromState} from './lib/settings.js';
+import {clampRefreshMinutes, forgetCity, placeKey, rememberCity, savedCitiesFromState} from './lib/settings.js';
 
 export default class UbuntuWeatherPreferences extends ExtensionPreferences {
     async fillPreferencesWindow(window) {
@@ -19,13 +19,19 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
         });
         this._resultRows = [];
         this._savedRows = [];
+        this._settingsSignals = [];
         this._searchToken = 0;
         this._searchDelay = 0;
+        this._closed = false;
         window.connect('close-request', () => {
+            this._closed = true;
             if (this._searchDelay) {
                 GLib.source_remove(this._searchDelay);
                 this._searchDelay = 0;
             }
+            for (const id of this._settingsSignals)
+                this._settings?.disconnect(id);
+            this._settingsSignals = [];
             this._client?.destroy();
             this._client = null;
         });
@@ -41,52 +47,65 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
             icon_name: 'find-location-symbolic',
         });
 
-        const current = new Adw.PreferencesGroup({
-            title: _('Saved city'),
-            description: _('Choose a city. No weather is shown until a location is set.'),
-        });
-        this._currentRow = new Adw.ActionRow({
-            title: this._savedTitle(settings),
-            subtitle: settings.get_boolean('manual-ready') ? _('Manual city') : _('No city selected'),
-        });
-        current.add(this._currentRow);
-        page.add(current);
-
-        this._savedGroup = new Adw.PreferencesGroup({title: _('Saved cities')});
+        this._savedGroup = new Adw.PreferencesGroup();
         page.add(this._savedGroup);
         this._fillSaved(settings);
 
-        const search = new Adw.PreferencesGroup({
-            title: _('City'),
+        this._searchGroup = new Adw.PreferencesGroup({
+            title: _('Add a city'),
             description: _('Search uses the Open-Meteo geocoding service.'),
         });
         this._entry = new Adw.EntryRow({title: _('City name')});
+        this._entry.add_prefix(new Gtk.Image({
+            icon_name: 'system-search-symbolic',
+        }));
+        this._spinner = new Gtk.Spinner({
+            visible: false,
+            halign: Gtk.Align.CENTER,
+            valign: Gtk.Align.CENTER,
+        });
+        this._entry.add_suffix(this._spinner);
         this._entry.connect('notify::text', () => this._scheduleSearch());
         this._entry.connect('entry-activated', () => this._searchNow());
-        search.add(this._entry);
-        const button = new Adw.ButtonRow({title: _('Search')});
-        button.connect('activated', () => this._searchNow());
-        search.add(button);
-        this._searchStatus = new Adw.ActionRow({title: _('Type at least 2 characters.')});
-        search.add(this._searchStatus);
-        page.add(search);
+        this._searchGroup.add(this._entry);
+        page.add(this._searchGroup);
 
-        this._resultsGroup = new Adw.PreferencesGroup({title: _('Results')});
+        this._resultsGroup = new Adw.PreferencesGroup({
+            title: _('Results'),
+            visible: false,
+        });
         page.add(this._resultsGroup);
 
         const automatic = new Adw.PreferencesGroup({
             title: _('Automatic location'),
-            description: _('A system dialog asks for permission. City-level coordinates are sent only to Open-Meteo.'),
         });
-        const autoRow = new Adw.SwitchRow({
-            title: _('Automatic location'),
+        this._autoRow = new Adw.SwitchRow({
+            title: _('Use automatic location'),
+            subtitle: _('A system dialog asks for permission. City-level coordinates are sent only to Open-Meteo.'),
             active: settings.get_boolean('use-auto-location'),
         });
-        autoRow.connect('notify::active', () => {
-            settings.set_boolean('use-auto-location', autoRow.active);
+        this._autoRow.add_prefix(new Gtk.Image({
+            icon_name: 'find-location-symbolic',
+        }));
+        this._autoRow.connect('notify::active', () => {
+            if (settings.get_boolean('use-auto-location') === this._autoRow.active)
+                return;
+            settings.set_boolean('use-auto-location', this._autoRow.active);
+            this._syncSavedDescription();
+            this._refreshAutoPlace();
         });
-        automatic.add(autoRow);
+        automatic.add(this._autoRow);
+        this._autoPlaceRow = new Adw.ActionRow({visible: false});
+        this._autoPlaceRow.add_prefix(new Gtk.Image({
+            icon_name: 'mark-location-symbolic',
+        }));
+        automatic.add(this._autoPlaceRow);
         page.add(automatic);
+
+        const refreshAuto = () => this._refreshAutoPlace();
+        for (const key of ['auto-city-name', 'auto-country-name', 'auto-ready', 'location-error'])
+            this._settingsSignals.push(settings.connect(`changed::${key}`, refreshAuto));
+        this._refreshAutoPlace();
         return page;
     }
 
@@ -212,15 +231,9 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
         return row;
     }
 
-    _savedTitle(settings) {
-        if (!settings.get_boolean('manual-ready'))
-            return _('No city selected');
-        const city = settings.get_string('city-name');
-        const country = settings.get_string('country-name');
-        return country ? `${city}, ${country}` : city;
-    }
-
     _scheduleSearch() {
+        if (this._closed)
+            return;
         if (this._searchDelay) {
             GLib.source_remove(this._searchDelay);
             this._searchDelay = 0;
@@ -241,113 +254,264 @@ export default class UbuntuWeatherPreferences extends ExtensionPreferences {
     }
 
     async _search() {
+        if (this._closed)
+            return;
         const query = this._entry.get_text().trim();
         this._clearResults();
         if (query.length < 2) {
-            this._searchStatus.title = _('Type at least 2 characters.');
+            this._setSearching(false);
+            this._setSearchMessage(query.length === 0 ? null : _('Type at least 2 characters.'));
             return;
         }
         const token = ++this._searchToken;
-        this._searchStatus.title = _('Searching…');
+        this._setSearching(true);
+        this._setSearchMessage(_('Searching…'));
         let payload;
         try {
             const locale = GLib.get_language_names()?.[0] || 'en';
             payload = await this._client.getJson(openMeteoProvider.geocodingUrl(query, locale));
         } catch (error) {
-            if (token === this._searchToken)
+            if (!this._closed && token === this._searchToken)
                 this._searchFailed(error);
             return;
         }
-        if (token !== this._searchToken)
+        if (this._closed || token !== this._searchToken)
             return;
+        this._setSearching(false);
         const cities = openMeteoProvider.parseGeocoding(payload);
         if (cities.length === 0) {
-            this._searchStatus.title = _('No matching city.');
+            this._setSearchMessage(_('No matching city.'));
             return;
         }
-        this._searchStatus.title = _('Results');
-        for (const city of cities) {
-            const subtitle = [city.admin, city.country].filter(Boolean).join(', ');
-            const row = new Adw.ActionRow({
-                title: city.name,
-                subtitle,
-                activatable: true,
-            });
-            row.connect('activated', () => this._selectCity(city));
-            this._resultRows.push(row);
-            this._resultsGroup.add(row);
-        }
+        this._setSearchMessage(null);
+        this._resultsGroup.visible = true;
+        for (const city of cities)
+            this._addResult(city);
     }
 
     _searchFailed(error) {
+        this._setSearching(false);
         const code = error?.code || 'network';
-        this._searchStatus.title = code === 'rate-limit'
+        this._setSearchMessage(code === 'rate-limit'
             ? _('The weather service asked to slow down.')
-            : _('Search failed.');
+            : _('Search failed.'));
+    }
+
+    _setSearchMessage(message) {
+        if (this._closed || !this._searchGroup)
+            return;
+        this._searchGroup.description = message
+            || _('Search uses the Open-Meteo geocoding service.');
+    }
+
+    _setSearching(active) {
+        if (this._closed || !this._spinner)
+            return;
+        this._spinner.spinning = active;
+        this._spinner.visible = active;
+    }
+
+    _resetSearch() {
+        if (this._searchDelay) {
+            GLib.source_remove(this._searchDelay);
+            this._searchDelay = 0;
+        }
+        this._searchToken++;
+        this._setSearching(false);
+        this._clearResults();
+        this._setSearchMessage(null);
+        if (this._entry?.get_text())
+            this._entry.set_text('');
+    }
+
+    _addResult(city) {
+        const row = new Adw.ActionRow({
+            title: city.name,
+            subtitle: [city.admin, city.country].filter(Boolean).join(', '),
+            activatable: true,
+        });
+        row.add_prefix(new Gtk.Image({icon_name: 'mark-location-symbolic'}));
+        const choose = new Gtk.Button({
+            label: _('Choose'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+        choose.connect('clicked', () => this._selectCity(city));
+        row.add_suffix(choose);
+        row.connect('activated', () => this._selectCity(city));
+        this._resultRows.push(row);
+        this._resultsGroup.add(row);
+    }
+
+    _locationState(settings) {
+        return {
+            savedCities: settings.get_string('saved-cities'),
+            manualReady: settings.get_boolean('manual-ready'),
+            cityName: settings.get_string('city-name'),
+            countryName: settings.get_string('country-name'),
+            adminName: settings.get_string('admin-name'),
+            latitude: settings.get_double('latitude'),
+            longitude: settings.get_double('longitude'),
+            timezone: settings.get_string('timezone'),
+        };
+    }
+
+    _manualKey(settings) {
+        if (!settings.get_boolean('manual-ready'))
+            return null;
+        return placeKey({
+            latitude: settings.get_double('latitude'),
+            longitude: settings.get_double('longitude'),
+            source: 'manual',
+        });
+    }
+
+    _syncSavedDescription() {
+        if (!this._savedGroup)
+            return;
+        if (!this._hasSavedCities) {
+            this._savedGroup.description = _('Choose a city. No weather is shown until a location is set.');
+            return;
+        }
+        this._savedGroup.description = this._settings.get_boolean('use-auto-location')
+            ? _('Automatic location replaces the checked city.')
+            : _('The checked city is shown beside the clock.');
     }
 
     _fillSaved(settings) {
         for (const row of this._savedRows)
             this._savedGroup.remove(row);
         this._savedRows = [];
-        const state = {
-            savedCities: settings.get_string('saved-cities'),
-            manualReady: settings.get_boolean('manual-ready'),
-            cityName: settings.get_string('city-name'),
-            countryName: settings.get_string('country-name'),
-            adminName: settings.get_string('admin-name'),
-            latitude: settings.get_double('latitude'),
-            longitude: settings.get_double('longitude'),
-            timezone: settings.get_string('timezone'),
-        };
-        const cities = savedCitiesFromState(state);
-        this._savedGroup.visible = cities.length > 0;
+        const cities = savedCitiesFromState(this._locationState(settings));
+        const activeKey = this._manualKey(settings);
+        this._hasSavedCities = cities.length > 0;
+        this._savedGroup.title = cities.length > 1 ? _('Saved cities') : _('Saved city');
+        if (!this._hasSavedCities) {
+            const empty = new Adw.ActionRow({title: _('No city selected')});
+            empty.add_prefix(new Gtk.Image({icon_name: 'find-location-symbolic'}));
+            this._savedRows.push(empty);
+            this._savedGroup.add(empty);
+        }
         for (const city of cities) {
-            const subtitle = [city.admin, city.country].filter(Boolean).join(', ');
-            const row = new Adw.ActionRow({
-                title: city.name,
-                subtitle,
-                activatable: true,
-            });
-            row.connect('activated', () => this._selectCity(city));
+            const active = placeKey({...city, source: 'manual'}) === activeKey;
+            const row = this._savedCityRow(city, active);
             this._savedRows.push(row);
             this._savedGroup.add(row);
         }
+        this._syncSavedDescription();
     }
 
-    _selectCity(city) {
+    _savedCityRow(city, active) {
+        const place = [city.admin, city.country].filter(Boolean).join(', ');
+        const manual = _('Manual city');
+        const row = new Adw.ActionRow({
+            title: city.name,
+            subtitle: active ? (place ? `${place} · ${manual}` : manual) : place,
+            activatable: !active,
+        });
+        const icon = new Gtk.Image({icon_name: 'mark-location-symbolic'});
+        if (active)
+            icon.add_css_class('accent');
+        row.add_prefix(icon);
+        if (active) {
+            const check = new Gtk.Image({icon_name: 'emblem-ok-symbolic'});
+            check.add_css_class('success');
+            row.add_suffix(check);
+        }
+        const remove = new Gtk.Button({
+            icon_name: 'user-trash-symbolic',
+            valign: Gtk.Align.CENTER,
+            tooltip_text: _('Remove'),
+            css_classes: ['flat'],
+        });
+        remove.update_property([Gtk.AccessibleProperty.LABEL], [_('Remove')]);
+        remove.connect('clicked', () => this._removeCity(city));
+        row.add_suffix(remove);
+        if (!active)
+            row.connect('activated', () => this._selectCity(city));
+        return row;
+    }
+
+    _writeManual(city) {
         const settings = this._settings;
-        const state = {
-            savedCities: settings.get_string('saved-cities'),
-            manualReady: settings.get_boolean('manual-ready'),
-            cityName: settings.get_string('city-name'),
-            countryName: settings.get_string('country-name'),
-            adminName: settings.get_string('admin-name'),
-            latitude: settings.get_double('latitude'),
-            longitude: settings.get_double('longitude'),
-            timezone: settings.get_string('timezone'),
-        };
-        const list = rememberCity(savedCitiesFromState(state), city);
-        settings.set_string('saved-cities', JSON.stringify(list));
-        settings.set_string('city-name', city.name);
-        settings.set_string('country-name', city.country);
+        settings.set_string('city-name', city.name || '');
+        settings.set_string('country-name', city.country || '');
         settings.set_string('admin-name', city.admin || '');
         settings.set_string('timezone', city.timezone || '');
         settings.set_double('latitude', city.latitude);
         settings.set_double('longitude', city.longitude);
         settings.set_boolean('manual-ready', true);
+    }
+
+    _clearManual(settings) {
+        settings.set_boolean('manual-ready', false);
+        settings.set_string('city-name', '');
+        settings.set_string('country-name', '');
+        settings.set_string('admin-name', '');
+        settings.set_string('timezone', '');
+        settings.set_double('latitude', 0);
+        settings.set_double('longitude', 0);
+    }
+
+    _selectCity(city) {
+        const settings = this._settings;
+        const list = rememberCity(savedCitiesFromState(this._locationState(settings)), city);
+        settings.set_string('saved-cities', JSON.stringify(list));
+        this._writeManual(city);
         settings.set_boolean('use-auto-location', false);
         settings.set_string('location-error', '');
-        this._currentRow.title = city.country ? `${city.name}, ${city.country}` : city.name;
-        this._currentRow.subtitle = _('Manual city');
-        this._searchStatus.title = _('Saved city');
+        if (this._autoRow?.active)
+            this._autoRow.active = false;
+        this._refreshAutoPlace();
+        this._resetSearch();
         this._fillSaved(settings);
+    }
+
+    _removeCity(city) {
+        const settings = this._settings;
+        const cities = savedCitiesFromState(this._locationState(settings));
+        const active = this._manualKey(settings) === placeKey({...city, source: 'manual'});
+        const list = forgetCity(cities, city);
+        settings.set_string('saved-cities', JSON.stringify(list));
+        if (active) {
+            if (list.length > 0)
+                this._writeManual(list[0]);
+            else
+                this._clearManual(settings);
+        }
+        this._fillSaved(settings);
+    }
+
+    _refreshAutoPlace() {
+        if (this._closed || !this._autoPlaceRow)
+            return;
+        const settings = this._settings;
+        const enabled = settings.get_boolean('use-auto-location');
+        const ready = settings.get_boolean('auto-ready');
+        const name = settings.get_string('auto-city-name').trim();
+        const country = settings.get_string('auto-country-name').trim();
+        const denied = settings.get_string('location-error') === 'denied' && !ready;
+        if (enabled && denied) {
+            this._autoPlaceRow.visible = true;
+            this._autoPlaceRow.title = _('Automatic location is unavailable.');
+            this._autoPlaceRow.subtitle = '';
+            return;
+        }
+        if (enabled && name) {
+            this._autoPlaceRow.visible = true;
+            this._autoPlaceRow.title = country ? `${name}, ${country}` : name;
+            this._autoPlaceRow.subtitle = _('Current location');
+            return;
+        }
+        this._autoPlaceRow.visible = false;
     }
 
     _clearResults() {
         for (const row of this._resultRows)
             this._resultsGroup.remove(row);
         this._resultRows = [];
+        if (this._resultsGroup)
+            this._resultsGroup.visible = false;
     }
 
     _extensionEnabled() {

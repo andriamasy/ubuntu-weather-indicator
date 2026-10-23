@@ -352,3 +352,27 @@ msgstr "Place name by OpenStreetMap"
 
 msgid "Fallback forecast, no API key"
 msgstr "Fallback forecast, no API key"
+
+msgid "Add a city"
+msgstr "Add a city"
+
+msgid "Automatic location replaces the checked city."
+msgstr "Automatic location replaces the checked city."
+
+msgid "Choose"
+msgstr "Choose"
+
+msgid "Remove"
+msgstr "Remove"
+
+msgid "The checked city is shown beside the clock."
+msgstr "The checked city is shown beside the clock."
+
+msgid "Use automatic location"
+msgstr "Use automatic location"
+
+msgid "Local weather"
+msgstr "Local weather"
+
+msgid "Weather data provided by:"
+msgstr "Weather data provided by:"
